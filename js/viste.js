@@ -3,7 +3,8 @@
 //   Esercizi (ricerca), Compiti del giorno, Progressi,
 //   pannello Capitoli + Segnalibri, Ricerca nel testo del libro.
 // =====================================================================
-import { $, el, toast, apriScheda, conferma } from './ui.js';
+import { $, el, toast, apriScheda, conferma, scaricaFile, eIOS } from './ui.js';
+import { creaPdfCompiti } from './pdfcompiti.js';
 import { db, ldb } from './db.js';
 import { stato, on, emit } from './stato.js';
 import { UNITA, LIBRO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
@@ -83,9 +84,59 @@ export function initCompiti() {
     disegnaCompiti();
     toast(`Lista creata: ${voci.length} esercizi`);
   });
+  $('#btn-compiti-pdf').onclick = () => {
+    const testo = $('#compiti-testo').value.trim();
+    const voci = leggiRichiesta(testo);
+    if (!voci.length) { toast('Scrivi per esempio: p. 546 es. 12, 15, 20'); return; }
+    apriPdfCompiti(voci, testo, $('#compiti-data').value || null);
+  };
   on('stato-esercizi', disegnaCompiti);
   on('libro-cambiato', disegnaCompiti);
   disegnaCompiti();
+}
+
+/**
+ * Scheda "PDF dei compiti": ritaglia gli esercizi, quadretti, risposte in fondo.
+ * Poi si può condividere (Salva su File, AirDrop, stampa…) o scaricare.
+ */
+export function apriPdfCompiti(voci, testo, per = null) {
+  const s = apriScheda('📄 PDF dei compiti');
+  const svolti = el('input', { type: 'checkbox' });
+  const stato_ = el('p', { class: 'nota' });
+  const barra = el('div', { class: 'barra-progresso' }, el('div', { style: { width: '0%' } }));
+  const azioni = el('div', { class: 'riga-bottoni' });
+  const vai = el('button', { class: 'btn primario grande' }, '📄 Crea il PDF');
+  s.corpo.append(
+    el('p', {}, el('b', {}, testo)),
+    el('p', { class: 'nota' }, `${voci.length} esercizi. Ognuno ritagliato ad alta risoluzione con il suo risultato, sotto il foglio a quadretti. Se sono corti, fino a 3 per pagina. In fondo le risposte.`),
+    el('label', { class: 'interruttore' }, svolti, el('span', {}, 'Aggiungi in fondo anche gli svolgimenti (passi)')),
+    el('div', { class: 'riga-bottoni' }, vai), barra, stato_, azioni);
+  vai.onclick = async () => {
+    vai.disabled = true;
+    try {
+      const data = per || new Date().toISOString().slice(0, 10);
+      const titolo = `Compiti${per ? ' per il ' + new Date(per + 'T12:00').toLocaleDateString('it-IT') : ''} · ${testo}`.slice(0, 95);
+      const { blob, nonTrovati, trovati } = await creaPdfCompiti(voci, {
+        titolo, conSvolgimenti: svolti.checked,
+        avanzamento: (n, tot, t) => { barra.firstChild.style.width = `${100 * n / tot}%`; stato_.textContent = t; },
+      });
+      const pagine = [...new Set(voci.map(v => v.p))].join('-');
+      const nome = `Compiti_p${pagine}_${data}.pdf`.replace(/[^\w.-]/g, '_');
+      const file = new File([blob], nome, { type: 'application/pdf' });
+      stato_.textContent = `✅ Pronto: ${trovati} esercizi, ${(blob.size / 1024 / 1024).toFixed(1)} MB.` +
+        (nonTrovati.length ? ` ⚠️ Non trovati: ${nonTrovati.map(v => `p. ${v.p} es. ${v.es}`).join(', ')}.` : '');
+      const url = URL.createObjectURL(blob);
+      azioni.replaceChildren(
+        navigator.canShare?.({ files: [file] })
+          ? el('button', { class: 'btn primario', onclick: () => navigator.share({ files: [file], title: nome }).catch(() => {}) }, eIOS ? '📤 Salva su File / Stampa' : '📤 Condividi')
+          : '',
+        el('button', { class: 'btn', onclick: () => window.open(url, '_blank') }, '👀 Apri'),
+        el('button', { class: 'btn', onclick: () => scaricaFile(nome, blob) }, '⬇️ Scarica'));
+    } catch (e) {
+      console.error(e);
+      stato_.textContent = '❌ ' + e.message;
+    } finally { vai.disabled = false; vai.textContent = '🔁 Crea di nuovo'; }
+  };
 }
 
 async function disegnaCompiti() {
@@ -102,11 +153,13 @@ async function disegnaCompiti() {
     blocchi.push(el('section', { class: 'card' },
       el('div', { class: 'card-testa' },
         el('div', {}, el('h3', {}, l.testo), el('p', { class: 'nota' }, `${data ? 'Per ' + data : 'Senza data'} · ${fatti}/${l.voci.length} fatti`)),
+        el('div', { class: 'riga-bottoni sinistra', style: { margin: 0, flexWrap: 'nowrap' } },
+        el('button', { class: 'btn piccolo', onclick: () => apriPdfCompiti(l.voci, l.testo, l.per) }, '📄 PDF'),
         el('button', { class: 'btn-icona', 'aria-label': 'Elimina lista', onclick: async () => {
           if (await conferma('Eliminare questa lista di compiti? (gli esercizi restano segnati come fatti)', { si: 'Elimina', pericolo: true })) {
             await ldb.del('compiti', l.id); disegnaCompiti();
           }
-        } }, '🗑')),
+        } }, '🗑'))),
       el('div', { class: 'barra-progresso' }, el('div', { style: { width: `${100 * fatti / l.voci.length}%` } })),
       griglia));
   }

@@ -21,6 +21,7 @@ Funziona **offline**: il libro e le soluzioni restano sull'iPad.
 | Cerca un esercizio (pagina + numero, ±5 pagine e oltre) | 📝 Esercizi |
 | Scheda esercizio + **Mostra soluzione esercizio** (a passi) | tocca un esercizio |
 | Compiti del giorno ("p. 546 es. 12, 15, 20-22") | 📅 Compiti |
+| **PDF dei compiti**: ritagli ad alta risoluzione, quadretti, fino a 3 per pagina, risposte (e svolgimenti) in fondo | 📅 Compiti → 📄 |
 | Fatto ✅ / Difficile ⚠️ / Preferito ⭐ e progressi per unità | 📊 Progressi |
 | Segnalibri, ricerca nel testo, tema scuro, zoom | in alto |
 | Importa uno **zip** con tutte le soluzioni JSON (es. Soluzioni_Matematica_Vol2.zip) | Importa |
@@ -64,6 +65,7 @@ js/
   esercizi.js       ricerca esercizi + scheda + soluzione
   viste.js          Esercizi, Compiti, Progressi, Capitoli, Segnalibri, Ricerca testo
   importa.js        importazione dal disco (anche .zip) / download dal server di casa
+  pdfcompiti.js     crea il PDF dei compiti (scrittore PDF senza librerie)
   zip.js            apre i file .zip nel browser (DecompressionStream)
   altro.js          impostazioni, aggiornamento app
   admin.js          area admin

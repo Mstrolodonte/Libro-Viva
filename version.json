@@ -1,7 +1,7 @@
 {
- "versione": "1.4.1",
+ "versione": "1.5.0",
  "data": "2026-11-25",
- "novita": "Tolto il riquadro Riprendi dalla libreria",
+ "novita": "PDF dei compiti: ritagli, quadretti, risposte in fondo",
  "file": [
   "index.html",
   "manifest.webmanifest",
@@ -22,6 +22,7 @@
   "js/lettore.js",
   "js/libreria.js",
   "js/pdf.js",
+  "js/pdfcompiti.js",
   "js/penna.js",
   "js/stato.js",
   "js/ui.js",
