@@ -18,7 +18,7 @@ export function initAltro() {
 
 /** Bottone "Importa dal disco" riusabile (anche nella schermata di benvenuto) */
 export async function importaDalDisco(opzioni) {
-  const files = await scegliFile({ accept: '.pdf,.json,application/pdf,application/json', multiplo: true });
+  const files = await scegliFile({ accept: '.pdf,.json,.zip,application/pdf,application/json,application/zip', multiplo: true });
   if (!files.length) return;
   toast(`Copio ${files.length} file sul dispositivo…`, 10000);
   const r = await importaFile(files, opzioni);

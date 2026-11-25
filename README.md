@@ -23,6 +23,7 @@ Funziona **offline**: il libro e le soluzioni restano sull'iPad.
 | Compiti del giorno ("p. 546 es. 12, 15, 20-22") | 📅 Compiti |
 | Fatto ✅ / Difficile ⚠️ / Preferito ⭐ e progressi per unità | 📊 Progressi |
 | Segnalibri, ricerca nel testo, tema scuro, zoom | in alto |
+| Importa uno **zip** con tutte le soluzioni JSON (es. Soluzioni_Matematica_Vol2.zip) | Importa |
 | Backup di disegni e progressi | ⚙️ Altro |
 | Area admin con password: carica soluzioni per unità | ⚙️ Altro → Admin |
 
@@ -62,7 +63,8 @@ js/
   penna.js          Apple Pencil
   esercizi.js       ricerca esercizi + scheda + soluzione
   viste.js          Esercizi, Compiti, Progressi, Capitoli, Segnalibri, Ricerca testo
-  importa.js        importazione dal disco / download dal server di casa
+  importa.js        importazione dal disco (anche .zip) / download dal server di casa
+  zip.js            apre i file .zip nel browser (DecompressionStream)
   altro.js          impostazioni, aggiornamento app
   admin.js          area admin
   backup.js         esporta / ripristina

@@ -8,6 +8,7 @@
 //      - PDF grande / con "Libro" nel nome      -> libro
 //      - Uxx_…_SVOLTI.pdf                       -> svolgimenti PDF dell'unità xx
 //      - Uxx_….json (lista con pagina, es, …)   -> soluzioni a passi
+//      - Soluzioni_….zip (tanti Uxx_….json)      -> aperto qui e importato file per file
 //      - backup_libro_vivo_….json               -> backup
 //      - indice_esercizi.json / indice_soluzioni.json -> indici (admin)
 //
@@ -21,11 +22,14 @@ import { salvaPdf, elencoFile, impostazioni, emit } from './stato.js';
 import { unitaDaNomeFile, LIBRO } from './config.js';
 import { caricaIndici } from './esercizi.js';
 import { ripristinaBackup } from './backup.js';
+import { apriZip } from './zip.js';
 
 /** Importa una lista di File scelti dall'utente. Restituisce un riepilogo. */
 export async function importaFile(files, { admin = false } = {}) {
   const fatti = [], saltati = [];
-  for (const f of files) {
+  files = [...files];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
     try {
       const nome = f.name;
       if (/\.pdf$/i.test(nome)) {
@@ -43,6 +47,12 @@ export async function importaFile(files, { admin = false } = {}) {
           continue;
         }
         saltati.push(`${nome} (PDF non riconosciuto)`);
+      } else if (/\.zip$/i.test(nome)) {
+        // zip: apro e importo i file che contiene (es. tutte le soluzioni JSON)
+        const dentro = await apriZip(f);
+        if (!dentro.length) { saltati.push(`${nome} (zip vuoto)`); continue; }
+        files.splice(i + 1, 0, ...dentro);
+        fatti.push(`Zip ${nome}: ${dentro.length} file`);
       } else if (/\.json$/i.test(nome)) {
         const dati = JSON.parse(await f.text());
         fatti.push(await importaJson(dati, nome, { admin }));

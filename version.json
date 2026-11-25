@@ -1,7 +1,7 @@
 {
- "versione": "1.3.0",
+ "versione": "1.4.0",
  "data": "2026-11-25",
- "novita": "Grafica nuova, pagina adattata allo schermo, due pagine affiancate, zoom dove hai le dita",
+ "novita": "Importa le soluzioni da un unico file zip",
  "file": [
   "index.html",
   "manifest.webmanifest",
@@ -26,6 +26,7 @@
   "js/stato.js",
   "js/ui.js",
   "js/viste.js",
+  "js/zip.js",
   "vendor/katex/LICENSE",
   "vendor/katex/katex.min.css",
   "vendor/katex/katex.min.js",

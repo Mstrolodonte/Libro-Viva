@@ -62,7 +62,7 @@ async function mostra() {
       el('td', {}, u.titolo),
       el('td', {}, j ? `${j.numero} soluzioni` : '—'),
       el('td', {}, el('button', { class: 'btn piccolo', onclick: async () => {
-        const f = await scegliFile({ accept: '.json,.pdf,application/json,application/pdf', multiplo: true });
+        const f = await scegliFile({ accept: '.json,.pdf,.zip,application/json,application/pdf,application/zip', multiplo: true });
         if (!f.length) return;
         const r = await importaFile(f, { admin: true });
         mostraRiepilogo(r); s.chiudi(); mostra();
@@ -129,7 +129,7 @@ async function mostra() {
     el('p', { class: 'nota' }, 'Servono se cambia il libro. Si creano con gli script nella cartella tools/ del progetto.'),
     el('div', { class: 'riga-bottoni sinistra' },
       el('button', { class: 'btn', onclick: async () => {
-        const files = await scegliFile({ accept: '.json,application/json', multiplo: true });
+        const files = await scegliFile({ accept: '.json,.zip,application/json,application/zip', multiplo: true });
         if (files.length) mostraRiepilogo(await importaFile(files, { admin: true }));
       } }, 'Carica indice'),
       el('button', { class: 'btn', onclick: async () => {
