@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Libro Vivo</title>
+  <meta name="description" content="Il libro di matematica sull'iPad: esercizi, soluzioni a passi e penna.">
+  <meta name="theme-color" content="#1f5fd6">
+  <!-- iPad: app a schermo intero quando è sulla schermata Home -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Libro Vivo">
+  <link rel="apple-touch-icon" href="icons/icona-180.png">
+  <link rel="icon" href="icons/icona-192.png">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="css/app.css">
+  <script src="vendor/katex/katex.min.js" defer></script>
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+
+<!-- ============ BARRA IN ALTO (solo nella sezione Libro) ============ -->
+<header id="barra-alta">
+  <button id="btn-capitoli" class="btn-icona" aria-label="Capitoli e segnalibri">☰</button>
+  <div id="titolo-unita" class="titolo-unita">Libro Vivo</div>
+  <div class="naviga">
+    <button id="btn-prec" class="btn-icona" aria-label="Pagina precedente">‹</button>
+    <input id="campo-pagina" class="campo-pagina" inputmode="numeric" aria-label="Pagina del libro" title="Pagina del libro (es. 546, oppure U18 5)">
+    <button id="btn-succ" class="btn-icona" aria-label="Pagina successiva">›</button>
+  </div>
+  <span id="totale-pagine" class="totale-pagine"></span>
+  <div class="strumenti">
+    <button id="btn-zoom-meno" class="btn-icona" aria-label="Rimpicciolisci">−</button>
+    <button id="btn-zoom-piu" class="btn-icona" aria-label="Ingrandisci">+</button>
+    <button id="btn-cerca-testo" class="btn-icona" aria-label="Cerca nel libro">🔍</button>
+    <button id="btn-segnalibro" class="btn-icona" aria-label="Segnalibro">🔖</button>
+    <button id="btn-penna" class="btn-icona" aria-label="Penna">✏️</button>
+  </div>
+</header>
+
+<!-- barra della penna -->
+<div id="barra-penna" hidden>
+  <button data-strumento="mano" class="btn-icona" aria-label="Mano (non scrivere)">✋</button>
+  <button data-strumento="penna" class="btn-icona" aria-label="Penna">🖊️</button>
+  <button data-strumento="evid" class="btn-icona" aria-label="Evidenziatore">🖍️</button>
+  <button data-strumento="gomma" class="btn-icona" aria-label="Gomma">🧽</button>
+  <span class="sep"></span>
+  <span id="posto-colori"></span>
+  <span class="sep"></span>
+  <button data-spessore="1" class="btn-icona spessore" aria-label="Fine"><i style="width:4px;height:4px"></i></button>
+  <button data-spessore="2" class="btn-icona spessore attivo" aria-label="Medio"><i style="width:7px;height:7px"></i></button>
+  <button data-spessore="4" class="btn-icona spessore" aria-label="Grosso"><i style="width:11px;height:11px"></i></button>
+  <span class="sep"></span>
+  <button id="btn-annulla" class="btn-icona" aria-label="Annulla">↩︎</button>
+  <button id="btn-rifai" class="btn-icona" aria-label="Rifai">↪︎</button>
+  <button id="btn-svuota-pagina" class="btn-icona" aria-label="Cancella tutto sulla pagina">🗑</button>
+  <button id="btn-solo-pencil" class="btn-testo" title="Se attivo, solo l'Apple Pencil scrive e il dito sfoglia">✍️ Solo Pencil</button>
+</div>
+
+<main>
+  <!-- ============ LIBRO ============ -->
+  <section id="vista-libro" class="vista">
+    <div id="benvenuto" class="benvenuto" hidden>
+      <div class="logo">📘</div>
+      <h1>Benvenuto in Libro Vivo</h1>
+      <p>Prima copia il libro sull'iPad. Lo fai <b>una volta sola</b>: dopo funziona anche senza Wi‑Fi.</p>
+      <div class="riga-bottoni">
+        <button id="btn-importa-benvenuto" class="btn primario grande">📂 Importa dal disco</button>
+        <button id="btn-guida-benvenuto" class="btn grande">❓ Come collego il disco del modem</button>
+      </div>
+      <p class="nota">Scegli <code>Macematica_Libro.pdf</code> e, se vuoi, anche i file delle soluzioni (<code>Uxx_….json</code> e <code>Uxx_…_SVOLTI.pdf</code>).</p>
+    </div>
+    <div id="lettore-scroll" class="lettore-scroll">
+      <div id="pagina-wrap" class="pagina-wrap">
+        <canvas id="canvas-pdf" class="canvas-pdf"></canvas>
+        <canvas id="canvas-penna" class="canvas-penna"></canvas>
+        <div id="riquadro-evidenza" class="riquadro-evidenza" hidden></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ESERCIZI ============ -->
+  <section id="vista-esercizi" class="vista pagina-testo">
+    <h1>Esercizi</h1>
+    <form id="form-esercizi" class="card form-ricerca" autocomplete="off">
+      <label class="etichetta">Pagina del libro
+        <input id="es-pagina" class="campo" type="number" inputmode="numeric" placeholder="546" min="2" max="917">
+      </label>
+      <label class="etichetta">Esercizio (anche più di uno)
+        <input id="es-numeri" class="campo" inputmode="numeric" placeholder="12, 15, 20-22">
+      </label>
+      <button class="btn primario">🔍 Cerca</button>
+      <p class="nota larga">Uso la pagina stampata sul libro. Se l'esercizio non è lì, lo cerco nelle pagine vicine (±5, poi sempre più lontano).</p>
+    </form>
+    <div id="es-risultati" class="griglia-tessere"></div>
+    <div id="es-recenti-box" hidden><h2>Recenti</h2><div id="es-recenti" class="griglia-tessere"></div></div>
+    <div id="es-difficili-box" hidden><h2>⚠️ Difficili</h2><div id="es-difficili" class="griglia-tessere"></div></div>
+    <div id="es-preferiti-box" hidden><h2>⭐ Preferiti</h2><div id="es-preferiti" class="griglia-tessere"></div></div>
+  </section>
+
+  <!-- ============ COMPITI ============ -->
+  <section id="vista-compiti" class="vista pagina-testo">
+    <h1>Compiti</h1>
+    <form id="form-compiti" class="card" autocomplete="off">
+      <label class="etichetta">Scrivi i compiti come li detta il prof
+        <input id="compiti-testo" class="campo" placeholder="p. 546 es. 12, 15, 20; p. 547 es. 3-5">
+      </label>
+      <div class="riga-campi">
+        <label class="etichetta">Per il giorno <input id="compiti-data" class="campo" type="date"></label>
+        <button class="btn primario">➕ Crea lista</button>
+      </div>
+    </form>
+    <div id="compiti-liste"></div>
+  </section>
+
+  <!-- ============ PROGRESSI ============ -->
+  <section id="vista-progressi" class="vista pagina-testo">
+    <h1>Progressi</h1>
+    <p id="progressi-totale" class="nota"></p>
+    <div id="progressi-unita" class="card lista-unita"></div>
+  </section>
+
+  <!-- ============ ALTRO ============ -->
+  <section id="vista-altro" class="vista pagina-testo">
+    <h1>Altro</h1>
+    <div id="altro-contenuto"></div>
+  </section>
+</main>
+
+<!-- ============ BARRA IN BASSO ============ -->
+<nav id="barra-schede">
+  <button data-vista="libro"><span>📖</span>Libro</button>
+  <button data-vista="esercizi"><span>📝</span>Esercizi</button>
+  <button data-vista="compiti"><span>📅</span>Compiti</button>
+  <button data-vista="progressi"><span>📊</span>Progressi</button>
+  <button data-vista="altro"><span>⚙️</span>Altro</button>
+</nav>
+
+<!-- pannello laterale: capitoli e segnalibri -->
+<aside id="pannello-capitoli" class="pannello">
+  <div class="pannello-corpo">
+    <div class="scheda-testa"><h2>Capitoli</h2><button id="chiudi-capitoli" class="btn-icona" aria-label="Chiudi">✕</button></div>
+    <ul id="lista-capitoli" class="lista-capitoli"></ul>
+    <h2>Segnalibri</h2>
+    <ul id="lista-segnalibri" class="lista-capitoli"></ul>
+  </div>
+</aside>
+
+<div id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
