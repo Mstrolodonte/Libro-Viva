@@ -40,7 +40,7 @@ function benvenuto(mostra) {
 async function importa() {
   await importaDalDisco();
   if (stato.libro) {
-    db.get('kv', `${stato.idLibro}:copertina`).then(c => { if (!c) creaCopertina().catch(() => {}); });
+    db.get('kv', `${stato.idLibro}:copertina`).then(c => c || creaCopertina().then(() => { if (document.body.dataset.vista === 'home') disegnaHomeLibro(); })).catch(() => {});
   }
   const vista = document.body.dataset.vista;
   if (vista === 'home') disegnaHomeLibro();
@@ -101,19 +101,19 @@ async function avvia() {
  * compare un bottoncino "📝 es. 12" che apre la scheda.
  */
 function collegaTocchiSullaPagina() {
-  const wrap = $('#pagina-wrap');
+  const box = $('#pagine');
   const chip = el('button', { class: 'chip-esercizio', hidden: true });
-  wrap.append(chip);
+  box.append(chip);
   let timer;
-  wrap.addEventListener('click', e => {
+  box.addEventListener('click', e => {
     if (penna.eAttiva() || e.target === chip) return;
-    const p = pdfToLibro(stato.pagina);
-    if (!p) return;
-    const r = wrap.getBoundingClientRect();
-    const s = Number(wrap.dataset.scala);
-    const x = (e.clientX - r.left) / s, y = (e.clientY - r.top) / s;
+    const sotto = lettore.paginaSotto(e.clientX, e.clientY);
+    const p = sotto && pdfToLibro(sotto.pdf);
+    if (!p) { chip.hidden = true; return; }
+    const { x, y } = sotto;
     const voce = eserciziDellaPagina(p).find(v => x >= v.b[0] && x <= v.b[2] && y >= v.b[1] && y <= v.b[3]);
     if (!voce) { chip.hidden = true; return; }
+    const r = box.getBoundingClientRect();
     chip.textContent = `📝 Apri es. ${voce.es}`;
     chip.style.left = `${Math.min(e.clientX - r.left, r.width - 140)}px`;
     chip.style.top = `${e.clientY - r.top - 44}px`;

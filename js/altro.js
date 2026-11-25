@@ -129,7 +129,8 @@ async function disegna(box = $('#altro-contenuto'), { soloApp = false } = {}) {
     el('h3', {}, '🎨 Aspetto e penna'),
     el('label', { class: 'etichetta' }, 'Tema', scelta('tema', [['auto', 'Automatico (come l\'iPad)'], ['chiaro', 'Chiaro'], ['scuro', 'Scuro']])),
     el('label', { class: 'etichetta' }, 'All\'apertura dell\'app', scelta('avvio', [['libreria', 'Mostra la libreria'], ['ultima', 'Riapri l\'ultima pagina letta']])),
-    el('label', { class: 'etichetta' }, 'Pagina', scelta('adatta', [['larghezza', 'Adatta alla larghezza'], ['pagina', 'Pagina intera']])),
+    el('label', { class: 'etichetta' }, 'Pagina', scelta('vistaPagina', [['pagina', 'Tutta la pagina nello schermo'], ['larghezza', 'Adatta alla larghezza']])),
+    el('label', { class: 'etichetta' }, 'Pagine affiancate', scelta('duePagine', [['auto', 'Automatico: due con l\'iPad in orizzontale'], ['si', 'Sempre due pagine'], ['no', 'Sempre una pagina']])),
     interruttore('pagineScure', 'Pagine scure nel tema scuro (inverte i colori del libro)'),
     interruttore('soloPencil', 'Solo l\'Apple Pencil scrive (il dito sfoglia)'));
 

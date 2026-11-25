@@ -114,7 +114,8 @@ const PREDEFINITE = {
   tema: 'auto',            // auto | chiaro | scuro
   pagineScure: false,      // inverte i colori delle pagine nel tema scuro
   soloPencil: true,        // solo l'Apple Pencil scrive, il dito sfoglia
-  adatta: 'larghezza',     // larghezza | pagina
+  vistaPagina: 'pagina',   // pagina (tutta la pagina nello schermo) | larghezza
+  duePagine: 'auto',       // auto (2 pagine con l'iPad in orizzontale) | si | no
   indirizzoServer: '',     // per scaricare il libro da un server di casa
   avvio: 'libreria',       // libreria | ultima  (cosa aprire all'avvio)
 };

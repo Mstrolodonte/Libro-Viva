@@ -7,7 +7,7 @@
 //   - i capitoli (dall'indice del PDF, oppure leggendo le intestazioni
 //     "Unità 3", "Capitolo 3", "Unit 3" … in cima alle pagine).
 // =====================================================================
-import { $, el, toast, apriScheda, conferma, scegliFile } from './ui.js';
+import { $, el, toast, apriScheda, conferma, scegliFile, icona } from './ui.js';
 import { db } from './db.js';
 import { stato, on, emit, elencoLibri, salvaLibroDef, eliminaLibro, apriLibro, ultimaLettura, leggiUltimaPagina, salvaPdf } from './stato.js';
 import { LIBRO, UNITA, LIBRO_VUOTO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
@@ -56,7 +56,7 @@ export async function disegnaLibreria() {
   const libroUltimo = ultima && libri.find(l => l.id === ultima.libro);
   if (libroUltimo) {
     pezzi.push(el('button', { class: 'riprendi', onclick: () => entraNelLibro(libroUltimo.id, { leggi: true }) },
-      el('span', { class: 'riprendi-icona' }, '▶'),
+      el('span', { class: 'riprendi-icona' }, icona('play')),
       el('span', {}, el('small', {}, 'Riprendi da dove eri'), el('b', {}, `${libroUltimo.materia || libroUltimo.titolo} · ${etichettaPer(libroUltimo, ultima.pdf)}`))));
   }
 
@@ -65,8 +65,9 @@ export async function disegnaLibreria() {
     const img = await copertina(l.id);
     const haPdf = !!(await db.get('file', `${l.id}:libro`).then(r => r && r.info));
     griglia.append(el('button', { class: 'libro-card', onclick: () => entraNelLibro(l.id) },
-      el('div', { class: 'copertina', style: { background: img ? `#fff url("${img}") center/cover` : l.colore } },
-        img ? '' : el('span', {}, (l.materia || l.titolo).slice(0, 3).toUpperCase())),
+      img ? el('div', { class: 'copertina', style: { background: `#fff url("${img}") center/cover` } })
+        : el('div', { class: 'copertina finta', style: { '--colore-libro': l.colore } },
+          el('span', { class: 'finta-materia' }, l.materia || 'Libro'), el('span', { class: 'finta-titolo' }, l.titolo)),
       el('div', { class: 'libro-info' },
         el('b', {}, l.materia || 'Libro'),
         el('small', {}, l.titolo),
@@ -116,8 +117,8 @@ export async function disegnaHomeLibro() {
   const box = $('#home-contenuto');
   const img = await copertina(stato.idLibro);
   const ultima = await leggiUltimaPagina();
-  const tessera = (icona, titolo, sotto, azione, classe = '') =>
-    el('button', { class: 'sezione ' + classe, onclick: azione }, el('span', { class: 'sezione-icona' }, icona), el('b', {}, titolo), sotto ? el('small', {}, sotto) : '');
+  const tessera = (nomeIcona, titolo, sotto, azione, classe = '') =>
+    el('button', { class: 'sezione ' + classe, onclick: azione }, icona(nomeIcona, 'sezione-icona'), el('b', {}, titolo), sotto ? el('small', {}, sotto) : '');
 
   const testa = el('div', { class: 'home-testa' },
     el('div', { class: 'copertina piccola', style: { background: img ? `#fff url("${img}") center/cover` : LIBRO.colore } }),
@@ -125,16 +126,16 @@ export async function disegnaHomeLibro() {
 
   const sezioni = el('div', { class: 'griglia-sezioni' });
   if (!stato.libro) {
-    sezioni.append(tessera('📂', 'Importa il PDF del libro', 'Una volta sola, dal disco del modem', () => emit('importa-libro'), 'evidenzia'));
+    sezioni.append(tessera('cartella', 'Importa il PDF del libro', 'Una volta sola, dal disco del modem', () => emit('importa-libro'), 'evidenzia'));
   } else {
-    sezioni.append(tessera('📖', ultima ? 'Continua a leggere' : 'Inizia a leggere', ultima ? etichettaPagina(ultima.pdf).replace(/^(\d+)$/, 'p. $1') : '',
+    sezioni.append(tessera('leggi', ultima ? 'Continua a leggere' : 'Inizia a leggere', ultima ? etichettaPagina(ultima.pdf).replace(/^(\d+)$/, 'p. $1') : '',
       () => emit('vai-pagina', { pdf: ultima?.pdf || libroToPdf(LIBRO.primaPaginaLibro), scrollTop: ultima?.scrollTop }), 'evidenzia'));
   }
   sezioni.append(
-    tessera('📝', 'Esercizi', 'Cerca per pagina e numero', () => emit('mostra-vista', 'esercizi')),
-    tessera('📅', 'Compiti', 'Le liste dei compiti', () => emit('mostra-vista', 'compiti')),
-    tessera('📊', 'Progressi', 'Esercizi fatti', () => emit('mostra-vista', 'progressi')),
-    tessera('⚙️', 'Impostazioni libro', 'Capitoli, pagine, file', () => apriImpostazioniLibro()));
+    tessera('esercizi', 'Esercizi', 'Cerca per pagina e numero', () => emit('mostra-vista', 'esercizi')),
+    tessera('compiti', 'Compiti', 'Le liste dei compiti', () => emit('mostra-vista', 'compiti')),
+    tessera('progressi', 'Progressi', 'Esercizi fatti', () => emit('mostra-vista', 'progressi')),
+    tessera('altro', 'Impostazioni libro', 'Capitoli, pagine, file', () => apriImpostazioniLibro()));
 
   // capitoli
   const capitoli = el('div', { class: 'card lista-unita' });

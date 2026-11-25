@@ -1,7 +1,7 @@
 {
- "versione": "1.2.0",
+ "versione": "1.3.0",
  "data": "2026-11-25",
- "novita": "Libri con segnalibri: unità, esercizi e autoverifica letti dal sommario del PDF",
+ "novita": "Grafica nuova, pagina adattata allo schermo, due pagine affiancate, zoom dove hai le dita",
  "file": [
   "index.html",
   "manifest.webmanifest",

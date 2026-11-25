@@ -10,7 +10,7 @@ export function el(tag, attr = {}, ...figli) {
     if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
     else if (k === 'class') e.className = v;
     else if (k === 'html') e.innerHTML = v;
-    else if (k === 'style' && typeof v === 'object') Object.assign(e.style, v);
+    else if (k === 'style' && typeof v === 'object') for (const [sk, sv] of Object.entries(v)) { if (sk.startsWith('--')) e.style.setProperty(sk, sv); else e.style[sk] = sv; }
     else if (v === true) e.setAttribute(k, '');
     else e.setAttribute(k, v);
   }
@@ -19,6 +19,14 @@ export function el(tag, attr = {}, ...figli) {
     e.append(f instanceof Node ? f : document.createTextNode(String(f)));
   }
   return e;
+}
+
+/** Icona a linee dal set in index.html (es. icona('leggi')) */
+export function icona(nome, classe = '') {
+  const s = document.createElement('span');
+  s.className = 'icona ' + classe;
+  s.innerHTML = `<svg class="ic"><use href="#i-${nome}"/></svg>`;
+  return s;
 }
 
 export const $ = (sel, root = document) => root.querySelector(sel);

@@ -20,24 +20,52 @@
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
+<!-- ============ ICONE (disegni a linee, si usano con <svg class="ic"><use href="#i-nome"/></svg>) ============ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-libreria" viewBox="0 0 24 24"><rect x="3" y="4" width="4.5" height="16" rx="1"/><rect x="9.5" y="4" width="4.5" height="16" rx="1"/><path d="M16 5.6l3.6-1 2.6 14.6-3.6 1z"/><path d="M3 8h4.5M9.5 8H14"/></symbol>
+  <symbol id="i-sezioni" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/></symbol>
+  <symbol id="i-leggi" viewBox="0 0 24 24"><path d="M2.5 5.5C5 4.2 8.5 4.3 12 6.3c3.5-2 7-2.1 9.5-.8v13.3c-2.5-1.3-6-1.2-9.5.8-3.5-2-7-2.1-9.5-.8z"/><path d="M12 6.3v13.3"/></symbol>
+  <symbol id="i-esercizi" viewBox="0 0 24 24"><rect x="4.5" y="3" width="15" height="18" rx="2.5"/><path d="M8.5 8.5l1.5 1.5 3-3M8.5 15h7M15 9h1"/></symbol>
+  <symbol id="i-compiti" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="2.5"/><path d="M3.5 10h17M8 3v4M16 3v4M9 15l2 2 4-4"/></symbol>
+  <symbol id="i-progressi" viewBox="0 0 24 24"><path d="M3 20.5h18"/><rect x="5" y="11" width="3.2" height="6.5" rx="1"/><rect x="10.4" y="5" width="3.2" height="12.5" rx="1"/><rect x="15.8" y="13" width="3.2" height="4.5" rx="1"/></symbol>
+  <symbol id="i-altro" viewBox="0 0 24 24"><path d="M4 6.5h9M19 6.5h1M4 12h3M11 12h9M4 17.5h11M19 17.5h1"/><circle cx="16" cy="6.5" r="2.3"/><circle cx="9" cy="12" r="2.3"/><circle cx="17" cy="17.5" r="2.3"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.8" cy="6.5" r="1.1"/><circle cx="4.8" cy="12" r="1.1"/><circle cx="4.8" cy="17.5" r="1.1"/></symbol>
+  <symbol id="i-cerca" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L20 20"/></symbol>
+  <symbol id="i-segnalibro" viewBox="0 0 24 24"><path d="M6.5 3.5h11v17l-5.5-4-5.5 4z"/></symbol>
+  <symbol id="i-penna" viewBox="0 0 24 24"><path d="M4 20l1.2-4.8L15.8 4.6a2 2 0 0 1 2.8 0l.8.8a2 2 0 0 1 0 2.8L8.8 18.8z"/><path d="M14 6.5l3.5 3.5"/></symbol>
+  <symbol id="i-indietro" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-avanti" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-meno" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+  <symbol id="i-piu" viewBox="0 0 24 24"><path d="M12 6v12M6 12h12"/></symbol>
+  <symbol id="i-una-pagina" viewBox="0 0 24 24"><rect x="6.5" y="3.5" width="11" height="17" rx="1.8"/></symbol>
+  <symbol id="i-due-pagine" viewBox="0 0 24 24"><rect x="2" y="5" width="9.5" height="14" rx="1.6"/><rect x="12.5" y="5" width="9.5" height="14" rx="1.6"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z"/></symbol>
+  <symbol id="i-cartella" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/></symbol>
+  <symbol id="i-ingranaggio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></symbol>
+</svg>
+
 
 <!-- ============ BARRA IN ALTO (solo nella sezione Libro) ============ -->
 <header id="barra-alta">
-  <button class="btn-icona" data-vai="home" aria-label="Sezioni del libro">‹</button>
-  <button id="btn-capitoli" class="btn-icona" aria-label="Capitoli e segnalibri">☰</button>
+  <button class="btn-icona" data-vai="home" aria-label="Sezioni del libro"><svg class="ic"><use href="#i-sezioni"/></svg></button>
+  <button id="btn-capitoli" class="btn-icona" aria-label="Capitoli e segnalibri"><svg class="ic"><use href="#i-menu"/></svg></button>
   <div id="titolo-unita" class="titolo-unita">Libro Vivo</div>
-  <div class="naviga">
-    <button id="btn-prec" class="btn-icona" aria-label="Pagina precedente">‹</button>
+  <div class="naviga gruppo">
+    <button id="btn-prec" class="btn-icona" aria-label="Pagina precedente"><svg class="ic"><use href="#i-indietro"/></svg></button>
     <input id="campo-pagina" class="campo-pagina" inputmode="numeric" aria-label="Pagina del libro" title="Pagina del libro (es. 546, oppure U18 5)">
-    <button id="btn-succ" class="btn-icona" aria-label="Pagina successiva">›</button>
+    <button id="btn-succ" class="btn-icona" aria-label="Pagina successiva"><svg class="ic"><use href="#i-avanti"/></svg></button>
   </div>
   <span id="totale-pagine" class="totale-pagine"></span>
   <div class="strumenti">
-    <button id="btn-zoom-meno" class="btn-icona" aria-label="Rimpicciolisci">−</button>
-    <button id="btn-zoom-piu" class="btn-icona" aria-label="Ingrandisci">+</button>
-    <button id="btn-cerca-testo" class="btn-icona" aria-label="Cerca nel libro">🔍</button>
-    <button id="btn-segnalibro" class="btn-icona" aria-label="Segnalibro">🔖</button>
-    <button id="btn-penna" class="btn-icona" aria-label="Penna">✏️</button>
+    <div class="gruppo">
+    <button id="btn-zoom-meno" class="btn-icona" aria-label="Rimpicciolisci"><svg class="ic"><use href="#i-meno"/></svg></button>
+    <button id="btn-zoom-adatta" class="btn-icona btn-zoom-valore" aria-label="Adatta la pagina allo schermo" title="Adatta allo schermo">100%</button>
+    <button id="btn-zoom-piu" class="btn-icona" aria-label="Ingrandisci"><svg class="ic"><use href="#i-piu"/></svg></button>
+    <button id="btn-due-pagine" class="btn-icona" aria-label="Una o due pagine" title="Una pagina / due pagine affiancate"><svg class="ic"><use href="#i-due-pagine"/></svg></button>
+    </div>
+    <button id="btn-cerca-testo" class="btn-icona" aria-label="Cerca nel libro"><svg class="ic"><use href="#i-cerca"/></svg></button>
+    <button id="btn-segnalibro" class="btn-icona" aria-label="Segnalibro"><svg class="ic"><use href="#i-segnalibro"/></svg></button>
+    <button id="btn-penna" class="btn-icona" aria-label="Penna"><svg class="ic"><use href="#i-penna"/></svg></button>
   </div>
 </header>
 
@@ -64,8 +92,8 @@
   <!-- ============ LIBRERIA (scegli il libro) ============ -->
   <section id="vista-libreria" class="vista pagina-testo">
     <div class="libreria-testa">
-      <h1>📚 La mia libreria</h1>
-      <button id="btn-impostazioni-app" class="btn-icona" aria-label="Impostazioni app">⚙️</button>
+      <div><p class="sopratitolo">Libro Vivo</p><h1>La mia libreria</h1></div>
+      <button id="btn-impostazioni-app" class="btn-icona" aria-label="Impostazioni app"><svg class="ic"><use href="#i-altro"/></svg></button>
     </div>
     <div id="libreria-contenuto"></div>
   </section>
@@ -89,10 +117,16 @@
       <p class="nota">Scegli il PDF del libro e, se ci sono, anche i file delle soluzioni (<code>Uxx_….json</code> e <code>Uxx_…_SVOLTI.pdf</code>).</p>
     </div>
     <div id="lettore-scroll" class="lettore-scroll">
-      <div id="pagina-wrap" class="pagina-wrap">
-        <canvas id="canvas-pdf" class="canvas-pdf"></canvas>
-        <canvas id="canvas-penna" class="canvas-penna"></canvas>
-        <div id="riquadro-evidenza" class="riquadro-evidenza" hidden></div>
+      <div id="pagine" class="pagine">
+        <div id="pagina-wrap" class="pagina-wrap">
+          <canvas class="canvas-pdf"></canvas>
+          <canvas class="canvas-penna"></canvas>
+          <div id="riquadro-evidenza" class="riquadro-evidenza" hidden></div>
+        </div>
+        <div id="pagina-wrap-2" class="pagina-wrap" hidden>
+          <canvas class="canvas-pdf"></canvas>
+          <canvas class="canvas-penna"></canvas>
+        </div>
       </div>
     </div>
   </section>
@@ -151,13 +185,13 @@
 
 <!-- ============ BARRA IN BASSO ============ -->
 <nav id="barra-schede">
-  <button data-vista="libreria"><span>📚</span>Libreria</button>
-  <button data-vista="home"><span>🏠</span>Sezioni</button>
-  <button data-vista="libro"><span>📖</span>Leggi</button>
-  <button data-vista="esercizi"><span>📝</span>Esercizi</button>
-  <button data-vista="compiti"><span>📅</span>Compiti</button>
-  <button data-vista="progressi"><span>📊</span>Progressi</button>
-  <button data-vista="altro"><span>⚙️</span>Altro</button>
+  <button data-vista="libreria"><span><svg class="ic"><use href="#i-libreria"/></svg></span>Libreria</button>
+  <button data-vista="home"><span><svg class="ic"><use href="#i-sezioni"/></svg></span>Sezioni</button>
+  <button data-vista="libro"><span><svg class="ic"><use href="#i-leggi"/></svg></span>Leggi</button>
+  <button data-vista="esercizi"><span><svg class="ic"><use href="#i-esercizi"/></svg></span>Esercizi</button>
+  <button data-vista="compiti"><span><svg class="ic"><use href="#i-compiti"/></svg></span>Compiti</button>
+  <button data-vista="progressi"><span><svg class="ic"><use href="#i-progressi"/></svg></span>Progressi</button>
+  <button data-vista="altro"><span><svg class="ic"><use href="#i-altro"/></svg></span>Altro</button>
 </nav>
 
 <!-- pannello laterale: capitoli e segnalibri -->

@@ -14,7 +14,9 @@ Funziona **offline**: il libro e le soluzioni restano sull'iPad.
 | Sezioni del libro: leggi, capitoli, esercizi, compiti, progressi | 🏠 Sezioni |
 | Legge il libro, pagine **stampate** (non del PDF) | 📖 Libro |
 | Capitoli automatici (mappa pagine, PDF = libro + 18) | ☰ in alto |
-| Penna Apple Pencil, evidenziatore, gomma, annulla | ✏️ in alto |
+| Pagina adattata allo schermo, **due pagine affiancate** (automatico in orizzontale) | in alto |
+| Zoom con due dita **dove hai le dita**, doppio tocco, Ctrl+rotella sul computer | sulla pagina |
+| Penna Apple Pencil, evidenziatore, gomma, annulla (anche sulla pagina destra) | ✏️ in alto |
 | Riapre l'ultima pagina, anche dopo un crash | automatico |
 | Cerca un esercizio (pagina + numero, ±5 pagine e oltre) | 📝 Esercizi |
 | Scheda esercizio + **Mostra soluzione esercizio** (a passi) | tocca un esercizio |
