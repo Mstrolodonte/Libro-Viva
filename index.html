@@ -23,6 +23,7 @@
 
 <!-- ============ BARRA IN ALTO (solo nella sezione Libro) ============ -->
 <header id="barra-alta">
+  <button class="btn-icona" data-vai="home" aria-label="Sezioni del libro">‹</button>
   <button id="btn-capitoli" class="btn-icona" aria-label="Capitoli e segnalibri">☰</button>
   <div id="titolo-unita" class="titolo-unita">Libro Vivo</div>
   <div class="naviga">
@@ -60,17 +61,32 @@
 </div>
 
 <main>
+  <!-- ============ LIBRERIA (scegli il libro) ============ -->
+  <section id="vista-libreria" class="vista pagina-testo">
+    <div class="libreria-testa">
+      <h1>📚 La mia libreria</h1>
+      <button id="btn-impostazioni-app" class="btn-icona" aria-label="Impostazioni app">⚙️</button>
+    </div>
+    <div id="libreria-contenuto"></div>
+  </section>
+
+  <!-- ============ SEZIONI DEL LIBRO ============ -->
+  <section id="vista-home" class="vista pagina-testo">
+    <button class="btn torna-libreria" data-vai="libreria">‹ Libreria</button>
+    <div id="home-contenuto"></div>
+  </section>
+
   <!-- ============ LIBRO ============ -->
   <section id="vista-libro" class="vista">
     <div id="benvenuto" class="benvenuto" hidden>
       <div class="logo">📘</div>
-      <h1>Benvenuto in Libro Vivo</h1>
-      <p>Prima copia il libro sull'iPad. Lo fai <b>una volta sola</b>: dopo funziona anche senza Wi‑Fi.</p>
+      <h1>Manca il PDF di questo libro</h1>
+      <p>Copialo sull'iPad. Lo fai <b>una volta sola</b>: dopo funziona anche senza Wi‑Fi.</p>
       <div class="riga-bottoni">
         <button id="btn-importa-benvenuto" class="btn primario grande">📂 Importa dal disco</button>
         <button id="btn-guida-benvenuto" class="btn grande">❓ Come collego il disco del modem</button>
       </div>
-      <p class="nota">Scegli <code>Macematica_Libro.pdf</code> e, se vuoi, anche i file delle soluzioni (<code>Uxx_….json</code> e <code>Uxx_…_SVOLTI.pdf</code>).</p>
+      <p class="nota">Scegli il PDF del libro e, se ci sono, anche i file delle soluzioni (<code>Uxx_….json</code> e <code>Uxx_…_SVOLTI.pdf</code>).</p>
     </div>
     <div id="lettore-scroll" class="lettore-scroll">
       <div id="pagina-wrap" class="pagina-wrap">
@@ -83,6 +99,7 @@
 
   <!-- ============ ESERCIZI ============ -->
   <section id="vista-esercizi" class="vista pagina-testo">
+    <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
     <h1>Esercizi</h1>
     <form id="form-esercizi" class="card form-ricerca" autocomplete="off">
       <label class="etichetta">Pagina del libro
@@ -102,6 +119,7 @@
 
   <!-- ============ COMPITI ============ -->
   <section id="vista-compiti" class="vista pagina-testo">
+    <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
     <h1>Compiti</h1>
     <form id="form-compiti" class="card" autocomplete="off">
       <label class="etichetta">Scrivi i compiti come li detta il prof
@@ -117,6 +135,7 @@
 
   <!-- ============ PROGRESSI ============ -->
   <section id="vista-progressi" class="vista pagina-testo">
+    <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
     <h1>Progressi</h1>
     <p id="progressi-totale" class="nota"></p>
     <div id="progressi-unita" class="card lista-unita"></div>
@@ -124,6 +143,7 @@
 
   <!-- ============ ALTRO ============ -->
   <section id="vista-altro" class="vista pagina-testo">
+    <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
     <h1>Altro</h1>
     <div id="altro-contenuto"></div>
   </section>
@@ -131,7 +151,9 @@
 
 <!-- ============ BARRA IN BASSO ============ -->
 <nav id="barra-schede">
-  <button data-vista="libro"><span>📖</span>Libro</button>
+  <button data-vista="libreria"><span>📚</span>Libreria</button>
+  <button data-vista="home"><span>🏠</span>Sezioni</button>
+  <button data-vista="libro"><span>📖</span>Leggi</button>
   <button data-vista="esercizi"><span>📝</span>Esercizi</button>
   <button data-vista="compiti"><span>📅</span>Compiti</button>
   <button data-vista="progressi"><span>📊</span>Progressi</button>

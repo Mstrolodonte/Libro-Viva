@@ -55,27 +55,38 @@ def consegne_pagina(page):
                 res.append(l["bbox"])
     return res
 
-def rettangoli(nums, W, H, consegne=()):
+def righe_pagina(page):
+    """Rettangoli di tutte le righe di testo della pagina"""
+    return [l["bbox"] for b in page.get_text("dict")["blocks"] for l in b.get("lines", [])]
+
+def rettangoli(nums, W, H, consegne=(), righe=()):
     mid = W / 2
     top_margin, bottom = 40, H - 36          # sotto c'è il numero di pagina
     left_x, right_end = 30, W - 22
     for o in nums:
         o["col"] = "L" if o["x"] < mid - 10 else "R"
-    def ha_compagno(o):
-        return any(p is not o and p["col"] != o["col"] and abs(p["y"] - o["y"]) < 6 for p in nums)
+    def prossimo_sx(o):
+        ys = [p["y"] for p in nums if p["col"] == "L" and p["y"] > o["y"] + 3]
+        return min(ys) if ys else bottom
+    def larga(o):
+        """Esercizio a tutta pagina: una riga che parte a sinistra e supera la metà"""
+        if o["col"] != "L":
+            return False
+        fine = min(prossimo_sx(o), o["y"] + 70)
+        return any(r[0] < mid - 10 and r[2] > mid + 20 and o["y"] - 2 <= r[1] < fine for r in righe)
+    for o in nums:
+        o["larga"] = larga(o)
     res = []
     for o in nums:
         sotto = [p for p in nums if p["y"] > o["y"] + 3]
-        if ha_compagno(o):
-            # due esercizi affiancati: mezza pagina
-            cand = [p["y"] for p in sotto if p["col"] == o["col"] or not ha_compagno(p) and p["col"] == "L"]
-            x0, x1 = (left_x, mid + 2) if o["col"] == "L" else (o["x"] - 8, right_end)
-        elif o["col"] == "L":
-            # esercizio a tutta larghezza: finisce al primo numero sotto
-            cand = [p["y"] for p in sotto]
+        if o["larga"]:
+            cand = [p["y"] for p in sotto]                       # finisce al primo numero sotto
             x0, x1 = left_x, right_end
+        elif o["col"] == "L":
+            cand = [p["y"] for p in sotto if p["col"] == "L"]    # colonna sinistra
+            x0, x1 = left_x, mid + 2
         else:
-            cand = [p["y"] for p in sotto if p["col"] == "R" or not ha_compagno(p)]
+            cand = [p["y"] for p in sotto if p["col"] == "R" or p["larga"]]   # colonna destra
             x0, x1 = o["x"] - 8, right_end
         y_end = min(cand) - 3 if cand else bottom
         y0 = max(top_margin, o["y"] - 3)
@@ -103,7 +114,7 @@ def main(src, dst):
             break
         page = doc[pi]
         nums = numeri_pagina(page)
-        for r in rettangoli(nums, page.rect.width, page.rect.height, consegne_pagina(page)):
+        for r in rettangoli(nums, page.rect.width, page.rect.height, consegne_pagina(page), righe_pagina(page)):
             e = {"p": pagina, "es": r["es"], "u": unita_di(pagina), "pdf": pi + 1, "b": r["bbox"]}
             if "c" in r:
                 e["c"] = r["c"]

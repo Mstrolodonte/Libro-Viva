@@ -3,10 +3,12 @@
 //  Ogni modulo può ascoltare un evento con on('nome', fn)
 //  e avvisare gli altri con emit('nome', dati).
 // =====================================================================
-import { db } from './db.js';
+import { db, ldb, libroDb, impostaLibroDb } from './db.js';
+import { MATEMATICA, impostaLibroCorrente, LIBRO } from './config.js';
 import { apriPdf, chiudiPdf } from './pdf.js';
 
 export const stato = {
+  idLibro: 'mat',       // libro aperto ora
   libro: null,          // PDFDocumentProxy del libro (null se non importato)
   infoLibro: null,      // { nome, dimensione, data, origine }
   pagina: 1,            // pagina PDF aperta ora
@@ -22,18 +24,35 @@ export function emit(evento, dati) { for (const fn of ascoltatori[evento] || [])
 //  Salvata SUBITO a ogni cambio pagina in localStorage (sincrono, quindi
 //  sopravvive anche a un crash) e anche in IndexedDB come copia.
 // ---------------------------------------------------------------------
-const CHIAVE_ULTIMA = 'libroVivo.ultimaPagina';
+const chiaveUltima = id => `libroVivo.ultimaPagina.${id}`;
+const CHIAVE_ULTIMO_LIBRO = 'libroVivo.ultimoLibro';
 
 export function salvaUltimaPagina(pdf, extra = {}) {
-  const dati = { pdf, quando: Date.now(), ...extra };
-  try { localStorage.setItem(CHIAVE_ULTIMA, JSON.stringify(dati)); } catch (e) { /* */ }
-  db.set('kv', 'ultimaPagina', dati).catch(() => {});
+  const dati = { pdf, quando: Date.now(), libro: stato.idLibro, ...extra };
+  try {
+    localStorage.setItem(chiaveUltima(stato.idLibro), JSON.stringify(dati));
+    localStorage.setItem(CHIAVE_ULTIMO_LIBRO, JSON.stringify(dati));
+  } catch (e) { /* */ }
+  ldb.set('kv', 'ultimaPagina', dati).catch(() => {});
 }
 
-export async function leggiUltimaPagina() {
+/** Ultima pagina letta in QUALSIASI libro (per "Riprendi") */
+export function ultimaLettura() {
+  try {
+    const u = JSON.parse(localStorage.getItem(CHIAVE_ULTIMO_LIBRO) || 'null');
+    if (u) return u;
+    // versione 1.0: c'era solo il libro di matematica
+    const vecchia = JSON.parse(localStorage.getItem('libroVivo.ultimaPagina') || 'null');
+    return vecchia ? { ...vecchia, libro: 'mat' } : null;
+  } catch (e) { return null; }
+}
+
+export async function leggiUltimaPagina(id = stato.idLibro) {
   let a = null, b = null;
-  try { a = JSON.parse(localStorage.getItem(CHIAVE_ULTIMA) || 'null'); } catch (e) { /* */ }
-  try { b = await db.get('kv', 'ultimaPagina'); } catch (e) { /* */ }
+  try { a = JSON.parse(localStorage.getItem(chiaveUltima(id)) || 'null'); } catch (e) { /* */ }
+  // vecchia versione 1.0 (un solo libro)
+  if (!a && id === 'mat') try { a = JSON.parse(localStorage.getItem('libroVivo.ultimaPagina') || 'null'); } catch (e) { /* */ }
+  try { b = await db.get('kv', `${id}:ultimaPagina`); } catch (e) { /* */ }
   if (a && b) return a.quando >= b.quando ? a : b;
   return a || b;
 }
@@ -44,42 +63,44 @@ export async function leggiUltimaPagina() {
 
 /** Apre il libro salvato. Restituisce true se c'è. */
 export async function caricaLibro() {
-  const rec = await db.get('file', 'libro');
-  if (!rec) { stato.libro = null; stato.infoLibro = null; return false; }
+  const rec = await ldb.get('file', 'libro');
+  if (!rec) { stato.libro = null; stato.infoLibro = null; stato.totalePagine = 0; return false; }
   stato.infoLibro = rec.info;
-  stato.libro = await apriPdf('libro', rec.blob);
+  stato.libro = await apriPdf(`${stato.idLibro}:libro`, rec.blob);
   stato.totalePagine = stato.libro.numPages;
+  // libro aggiunto dall'utente: l'ultima pagina stampata dipende dal PDF
+  if (!LIBRO.indiciApp && (!LIBRO.ultimaPaginaLibro || LIBRO.ultimaPaginaLibro >= 9999)) LIBRO.ultimaPaginaLibro = stato.totalePagine - LIBRO.offset;
   emit('libro-caricato');
   return true;
 }
 
 /** Salva un PDF sul dispositivo. chiave = "libro" oppure "svolti-10" */
 export async function salvaPdf(chiave, blob, info) {
-  await chiudiPdf(chiave);
-  await db.set('file', chiave, { blob, info: { ...info, dimensione: blob.size, importato: Date.now() } });
+  await chiudiPdf(`${stato.idLibro}:${chiave}`);
+  await ldb.set('file', chiave, { blob, info: { ...info, dimensione: blob.size, importato: Date.now() } });
   if (chiave === 'libro') await caricaLibro();
   emit('file-cambiati', chiave);
 }
 
 export async function eliminaPdf(chiave) {
-  await chiudiPdf(chiave);
-  await db.del('file', chiave);
+  await chiudiPdf(`${stato.idLibro}:${chiave}`);
+  await ldb.del('file', chiave);
   if (chiave === 'libro') { stato.libro = null; stato.infoLibro = null; }
   emit('file-cambiati', chiave);
 }
 
 /** Apre il PDF svolti di un'unità, se importato */
 export async function apriSvolti(u) {
-  const rec = await db.get('file', `svolti-${u}`);
+  const rec = await ldb.get('file', `svolti-${u}`);
   if (!rec) return null;
-  return apriPdf(`svolti-${u}`, rec.blob);
+  return apriPdf(`${stato.idLibro}:svolti-${u}`, rec.blob);
 }
 
 /** Elenco info dei file salvati: { chiave: info } */
 export async function elencoFile() {
   const out = {};
-  for (const k of await db.keys('file')) {
-    const r = await db.get('file', k);
+  for (const k of await ldb.keys('file')) {
+    const r = await ldb.get('file', k);
     out[k] = r.info;
   }
   return out;
@@ -95,6 +116,7 @@ const PREDEFINITE = {
   soloPencil: true,        // solo l'Apple Pencil scrive, il dito sfoglia
   adatta: 'larghezza',     // larghezza | pagina
   indirizzoServer: '',     // per scaricare il libro da un server di casa
+  avvio: 'libreria',       // libreria | ultima  (cosa aprire all'avvio)
 };
 export function impostazioni() {
   try { return { ...PREDEFINITE, ...JSON.parse(localStorage.getItem(CHIAVE_IMP) || '{}') }; } catch (e) { return { ...PREDEFINITE }; }
@@ -105,3 +127,54 @@ export function salvaImpostazione(k, v) {
   try { localStorage.setItem(CHIAVE_IMP, JSON.stringify(imp)); } catch (e) { /* */ }
   emit('impostazioni', imp);
 }
+
+// ---------------------------------------------------------------------
+//  LIBRERIA: elenco dei libri sul dispositivo
+//  kv "libri" = [ definizione, … ]  (il libro di matematica c'è sempre)
+// ---------------------------------------------------------------------
+
+export async function elencoLibri() {
+  const salvati = (await db.get('kv', 'libri')) || [];
+  const mat = salvati.find(l => l.id === 'mat');
+  // il libro di matematica prende sempre i dati aggiornati dell'app,
+  // tranne i capitoli/offset se l'admin li ha cambiati
+  const matematica = { ...MATEMATICA, ...(mat || {}), indiciApp: true, u18: MATEMATICA.u18, indiceAnalitico: MATEMATICA.indiceAnalitico };
+  if (mat?.nascosto) matematica.nascosto = true;
+  return [matematica, ...salvati.filter(l => l.id !== 'mat')];
+}
+
+export async function salvaLibroDef(def) {
+  const salvati = (await db.get('kv', 'libri')) || [];
+  const i = salvati.findIndex(l => l.id === def.id);
+  if (i >= 0) salvati[i] = def; else salvati.push(def);
+  await db.set('kv', 'libri', salvati);
+  if (def.id === stato.idLibro) impostaLibroCorrente(def.id === 'mat' ? { ...MATEMATICA, ...def, u18: MATEMATICA.u18, indiceAnalitico: MATEMATICA.indiceAnalitico } : def);
+  emit('libri-cambiati');
+}
+
+export async function eliminaLibro(id) {
+  if (id === 'mat') throw new Error('Il libro di matematica non si può togliere, solo nascondere');
+  const salvati = ((await db.get('kv', 'libri')) || []).filter(l => l.id !== id);
+  await db.set('kv', 'libri', salvati);
+  for (const k of ['libro']) await chiudiPdf(`${id}:${k}`);
+  await ldb.svuotaLibro(id);
+  try { localStorage.removeItem(chiaveUltima(id)); } catch (e) { /* */ }
+  emit('libri-cambiati');
+}
+
+/** Apre un libro della libreria: cambia "libro corrente" e carica il PDF */
+export async function apriLibro(id) {
+  const def = (await elencoLibri()).find(l => l.id === id);
+  if (!def) throw new Error('Libro non trovato');
+  stato.idLibro = id;
+  impostaLibroDb(id);
+  impostaLibroCorrente(def);
+  stato.libro = null; stato.infoLibro = null; stato.totalePagine = 0; stato.pagina = 1;
+  emit('libro-cambiato', def);
+  const c = await caricaLibro();
+  return c;
+}
+
+/** Il libro corrente come definizione */
+export const libroCorrente = () => ({ ...LIBRO });
+export { libroDb };

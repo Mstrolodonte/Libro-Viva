@@ -9,8 +9,8 @@
 //  Se una pagina non è nell'indice, leggo il testo della pagina con pdf.js.
 // =====================================================================
 import { el, toast, apriScheda } from './ui.js';
-import { db } from './db.js';
-import { stato, apriSvolti, emit } from './stato.js';
+import { db, ldb } from './db.js';
+import { stato, apriSvolti, emit, on } from './stato.js';
 import { ritaglio, tagliaBiancoInFondo, testoPagina } from './pdf.js';
 import { LIBRO, RICERCA, libroToPdf, UNITA, unitaDiPdf } from './config.js';
 
@@ -29,10 +29,14 @@ export const chiave = (p, es) => `${p}-${es}`;
 
 /** Carica gli indici: prima quelli dell'admin (se ci sono), poi quelli dell'app */
 export async function caricaIndici() {
-  const custom = await db.get('kv', 'indiceEsercizi');
-  const es = custom || await fetch('data/indice_esercizi.json').then(r => r.json());
-  const customSol = await db.get('kv', 'indiceSoluzioni');
-  const sol = customSol || await fetch('data/indice_soluzioni.json').then(r => r.json());
+  const perLibro = stato.idLibro;
+  const vuoto = { esercizi: [] }, vuotoSol = { unita: {} };
+  const custom = await ldb.get('kv', 'indiceEsercizi');
+  const es = custom || (LIBRO.indiciApp ? await fetch('data/indice_esercizi.json').then(r => r.json()) : vuoto);
+  const customSol = await ldb.get('kv', 'indiceSoluzioni');
+  const sol = customSol || (LIBRO.indiciApp ? await fetch('data/indice_soluzioni.json').then(r => r.json()) : vuotoSol);
+  if (perLibro !== stato.idLibro) return;   // nel frattempo è cambiato libro
+  indice.infoSvolti = {};
 
   indice.perPagina.clear(); indice.perChiave.clear(); indice.soluzioni.clear();
   for (const v of es.esercizi) {
@@ -45,7 +49,11 @@ export async function caricaIndici() {
     for (const s of info.soluzioni) indice.soluzioni.set(chiave(s.p, s.es), { u: Number(u), ...s });
   }
   indice.pronto = true;
+  indice.libro = perLibro;
 }
+
+// quando cambio libro, gli indici vanno ricaricati
+on('libro-cambiato', () => { indice.pronto = false; indice.perPagina.clear(); indice.perChiave.clear(); indice.soluzioni.clear(); caricaIndici().catch(console.error); });
 
 /** Tutti gli esercizi dell'indice (per i progressi) */
 export const tuttiGliEsercizi = () => [...indice.perChiave.values()];
@@ -69,7 +77,7 @@ export function ordinePagine(p, passo = RICERCA.passo, massimo = RICERCA.massimo
  * Restituisce { voce, cercata, trovata } oppure null.
  */
 export async function cercaEsercizio(p, es) {
-  if (!indice.pronto) await caricaIndici();
+  if (!indice.pronto || indice.libro !== stato.idLibro) await caricaIndici();
   for (const { p: pag } of ordinePagine(p)) {
     const voci = indice.perPagina.get(pag);
     if (voci) {
@@ -98,9 +106,12 @@ async function cercaNelTesto(pag, es) {
   const page = await stato.libro.getPage(pdf);
   const [, , W, H] = page.view;
   const sinistra = t.x < W / 2 - 10;
+  // fine: il numero dell'esercizio successivo nella stessa colonna (se c'è)
+  const dopo = pezzi.filter(o => o.str.trim() === String(es + 1) && o.y > t.y + 4 && Math.abs(o.x - t.x) < 30).sort((a, b) => a.y - b.y)[0];
+  const fine = dopo ? dopo.y - 4 : Math.min(H - 36, t.y + 160);
   return {
     p: pag, es, pdf, u: unitaDiPdf(pdf)?.n,
-    b: [sinistra ? 30 : t.x - 8, Math.max(40, t.y - 5), W - 22, Math.min(H - 36, t.y + 140)],
+    b: [sinistra ? 30 : t.x - 8, Math.max(10, t.y - 5), W - 22, fine],
     stimato: true,
   };
 }
@@ -109,13 +120,13 @@ async function cercaNelTesto(pag, es) {
 //  Stato di un esercizio: fatto ✅ / difficile ⚠️ / preferito ⭐
 // ---------------------------------------------------------------------
 export async function leggiStato(p, es) {
-  return (await db.get('stato', chiave(p, es))) || {};
+  return (await ldb.get('stato', chiave(p, es))) || {};
 }
 export async function cambiaStato(p, es, campo, valore) {
   const s = await leggiStato(p, es);
   s[campo] = valore;
   s.agg = Date.now();
-  await db.set('stato', chiave(p, es), s);
+  await ldb.set('stato', chiave(p, es), s);
   emit('stato-esercizi', { p, es });
   return s;
 }
@@ -198,7 +209,7 @@ async function mostraSoluzione(voce, zona) {
   zona.replaceChildren(el('div', { class: 'carica' }, 'Cerco la soluzione…'));
   const { p, es } = voce;
   const info = indice.soluzioni.get(chiave(p, es));
-  const json = await db.get('soluzioni', chiave(p, es));
+  const json = await ldb.get('soluzioni', chiave(p, es));
 
   if (json) {
     soluzioneAPassi(json, zona);

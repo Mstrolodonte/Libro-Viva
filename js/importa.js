@@ -16,7 +16,7 @@
 //    pubblica il file elenco.json. L'app scarica solo quando lo chiedi.
 // =====================================================================
 import { el, toast, mb, apriScheda } from './ui.js';
-import { db } from './db.js';
+import { db, ldb } from './db.js';
 import { salvaPdf, elencoFile, impostazioni, emit } from './stato.js';
 import { unitaDaNomeFile, LIBRO } from './config.js';
 import { caricaIndici } from './esercizi.js';
@@ -37,7 +37,7 @@ export async function importaFile(files, { admin = false } = {}) {
           fatti.push(`Svolti unità ${u} (PDF)`);
           continue;
         }
-        if (f.size > 50 * 1024 * 1024 || /libro/i.test(nome) || nome === LIBRO.nomeFile) {
+        if (!LIBRO.indiciApp || f.size > 50 * 1024 * 1024 || /libro/i.test(nome) || nome === LIBRO.nomeFile) {
           await salvaPdf('libro', f, { nome, origine: 'disco', modificato: f.lastModified });
           fatti.push(`Libro (${mb(f.size)})`);
           continue;
@@ -62,7 +62,7 @@ export async function importaJson(dati, nome = '', { admin = false } = {}) {
   if (Array.isArray(dati) && dati.length && 'pagina' in dati[0] && 'es' in dati[0]) {
     const n = await salvaSoluzioniJson(dati);
     const u = unitaDaNomeFile(nome);
-    if (u) await db.set('kv', `soluzioniJson-${u}`, { nome, numero: n, importato: Date.now() });
+    if (u) await ldb.set('kv', `soluzioniJson-${u}`, { nome, numero: n, importato: Date.now() });
     return `Soluzioni a passi${u ? ` unità ${u}` : ''}: ${n}`;
   }
   if (dati && dati.tipo === 'backup-libro-vivo') {
@@ -71,13 +71,13 @@ export async function importaJson(dati, nome = '', { admin = false } = {}) {
   }
   if (dati && Array.isArray(dati.esercizi) && 'offset' in dati) {
     if (!admin) throw new Error('gli indici si caricano dalla sezione Admin');
-    await db.set('kv', 'indiceEsercizi', dati);
+    await ldb.set('kv', 'indiceEsercizi', dati);
     await caricaIndici();
     return `Indice esercizi (${dati.esercizi.length})`;
   }
   if (dati && dati.unita && !Array.isArray(dati.unita)) {
     if (!admin) throw new Error('gli indici si caricano dalla sezione Admin');
-    await db.set('kv', 'indiceSoluzioni', dati);
+    await ldb.set('kv', 'indiceSoluzioni', dati);
     await caricaIndici();
     return 'Indice soluzioni';
   }
@@ -92,7 +92,7 @@ export async function salvaSoluzioniJson(lista) {
     const { immagine, ...resto } = s;    // l'immagine non serve: ritagliamo dal libro
     coppie.push([`${s.pagina}-${s.es}`, resto]);
   }
-  await db.setMany('soluzioni', coppie);
+  await ldb.setMany('soluzioni', coppie);
   emit('soluzioni-cambiate');
   return coppie.length;
 }
@@ -137,7 +137,7 @@ export async function leggiElencoServer() {
 export async function controllaAggiornamenti() {
   const elenco = await leggiElencoServer();
   const salvati = await elencoFile();
-  const json = new Map(await db.all('kv'));
+  const json = new Map(await ldb.all('kv'));
   const daScaricare = [];
   for (const f of elenco.file) {
     const ch = chiaveDaNome(f.nome);
@@ -178,8 +178,8 @@ export async function scaricaDalServer(lista, aggiorna = () => {}) {
       const testo = await new Blob(pezzi).text();
       await importaJson(JSON.parse(testo), f.nome);
       const u = f.chiave.slice(5);
-      const info = (await db.get('kv', `soluzioniJson-${u}`)) || {};
-      await db.set('kv', `soluzioniJson-${u}`, { ...info, modificatoServer: f.modificato });
+      const info = (await ldb.get('kv', `soluzioniJson-${u}`)) || {};
+      await ldb.set('kv', `soluzioniJson-${u}`, { ...info, modificatoServer: f.modificato });
     } else {
       const blob = new Blob(pezzi, { type: 'application/pdf' });
       await salvaPdf(f.chiave, blob, { nome: f.nome, origine: 'server', modificatoServer: f.modificato });

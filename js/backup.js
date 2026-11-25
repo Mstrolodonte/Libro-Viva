@@ -14,7 +14,7 @@ export async function creaBackup({ conSoluzioni = false } = {}) {
   const stores = conSoluzioni ? [...STORE_NEL_BACKUP, 'soluzioni'] : STORE_NEL_BACKUP;
   for (const s of stores) dati.store[s] = await db.all(s);
   // gli indici dell'admin sono grandi: li tengo solo se richiesti
-  if (!conSoluzioni) dati.store.kv = dati.store.kv.filter(([k]) => !/^indice/.test(k));
+  if (!conSoluzioni) dati.store.kv = dati.store.kv.filter(([k]) => !/(^|:)indice/.test(k));
   try { dati.localStorage = { ...localStorage }; } catch (e) { /* */ }
   return dati;
 }

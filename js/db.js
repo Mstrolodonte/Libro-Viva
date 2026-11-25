@@ -78,3 +78,62 @@ export async function spazioUsato() {
   } catch (e) { /* */ }
   return null;
 }
+
+// ---------------------------------------------------------------------
+//  ldb = come db, ma per il LIBRO APERTO ORA.
+//  Ogni chiave viene salvata con davanti l'id del libro: "mat:546-12".
+//  Così ogni libro ha i suoi disegni, esercizi fatti, compiti, ecc.
+// ---------------------------------------------------------------------
+let idLibro = 'mat';
+export function impostaLibroDb(id) { idLibro = id; }
+export const libroDb = () => idLibro;
+
+const pk = k => `${idLibro}:${k}`;
+const intervallo = () => IDBKeyRange.bound(`${idLibro}:`, `${idLibro}:￿`);
+
+function conIntervallo(store, metodo) {
+  return apri().then(d => new Promise((resolve, reject) => {
+    const req = d.transaction(store).objectStore(store)[metodo](intervallo());
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error);
+  }));
+}
+const togli = k => k.slice(idLibro.length + 1);
+
+export const ldb = {
+  get: (store, key) => db.get(store, pk(key)),
+  set: (store, key, val) => db.set(store, pk(key), val),
+  del: (store, key) => db.del(store, pk(key)),
+  keys: async (store) => (await conIntervallo(store, 'getAllKeys')).map(togli),
+  all: async (store) => {
+    const [chiavi, valori] = await Promise.all([conIntervallo(store, 'getAllKeys'), conIntervallo(store, 'getAll')]);
+    return chiavi.map((k, i) => [togli(k), valori[i]]);
+  },
+  setMany: (store, coppie) => db.setMany(store, coppie.map(([k, v]) => [pk(k), v])),
+  /** Cancella tutti i dati di un libro (quando lo togli dalla libreria) */
+  svuotaLibro: async (id) => {
+    const vecchio = idLibro;
+    idLibro = id;
+    try {
+      for (const s of STORES) for (const k of await conIntervallo(s, 'getAllKeys')) await db.del(s, k);
+    } finally { idLibro = vecchio; }
+  },
+};
+
+/**
+ * Migrazione dalla versione 1.0 (un solo libro): sposta i vecchi dati
+ * sotto il libro di matematica ("mat:"). Si fa una volta sola.
+ */
+const CHIAVI_GLOBALI = new Set(['adminHash', 'libri', 'versioneDati', 'ultimoLibro']);
+export async function migraDati() {
+  if ((await db.get('kv', 'versioneDati')) >= 2) return;
+  for (const s of STORES) {
+    const coppie = await db.all(s);
+    for (const [k, v] of coppie) {
+      if (typeof k === 'string' && (k.includes(':') || (s === 'kv' && CHIAVI_GLOBALI.has(k)))) continue;
+      await db.set(s, `mat:${k}`, v);
+      await db.del(s, k);
+    }
+  }
+  await db.set('kv', 'versioneDati', 2);
+}

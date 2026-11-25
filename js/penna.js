@@ -7,7 +7,7 @@
 //  I tratti di ogni pagina sono salvati in IndexedDB (store "tratti").
 // =====================================================================
 import { $, $$ } from './ui.js';
-import { db } from './db.js';
+import { db, ldb } from './db.js';
 import { impostazioni, salvaImpostazione, on } from './stato.js';
 
 let canvas, ctx;
@@ -41,6 +41,8 @@ export function init(c) {
 
   costruisciBarra();
   on('impostazioni', aggiornaModo);
+  // altro libro: dimentico la pagina (stesso numero, libro diverso)
+  on('libro-cambiato', () => { pagina = null; tratti = []; annullati = []; });
 }
 
 /** Mostra/nasconde la barra della penna */
@@ -74,7 +76,7 @@ export async function mostraPagina(numero, larghezza, altezza) {
     pagina = numero;
     annullati = [];
     tratti = [];
-    const salvati = (await db.get('tratti', numero)) || [];
+    const salvati = (await ldb.get('tratti', numero)) || [];
     if (numero !== pagina) return;
     tratti = salvati;
   }
@@ -186,7 +188,7 @@ function salva() {
   clearTimeout(timerSalva);
   // salvataggio quasi immediato (250 ms) per non perdere niente
   timerSalva = setTimeout(() => {
-    (copia.length ? db.set('tratti', p, copia) : db.del('tratti', p)).catch(e => console.error('Salvataggio disegno', e));
+    (copia.length ? ldb.set('tratti', p, copia) : ldb.del('tratti', p)).catch(e => console.error('Salvataggio disegno', e));
   }, 250);
 }
 

@@ -4,10 +4,10 @@
 //   pannello Capitoli + Segnalibri, Ricerca nel testo del libro.
 // =====================================================================
 import { $, el, toast, apriScheda, conferma } from './ui.js';
-import { db } from './db.js';
+import { db, ldb } from './db.js';
 import { stato, on, emit } from './stato.js';
-import { UNITA, U18, LIBRO, RISPOSTE_AUTOVERIFICA, libroToPdf, etichettaPagina, fineUnita } from './config.js';
-import { apriEsercizio, leggiRichiesta, chiave, tuttiGliEsercizi, caricaIndici } from './esercizi.js';
+import { UNITA, LIBRO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
+import { apriEsercizio, leggiRichiesta, chiave, tuttiGliEsercizi, caricaIndici, unitaDiPagina } from './esercizi.js';
 import { testoPagina } from './pdf.js';
 
 // ---------------------------------------------------------------------
@@ -28,6 +28,7 @@ export function initEsercizi() {
     disegnaRecenti();
   });
   on('stato-esercizi', () => { disegnaRecenti(); disegnaFiltri(); });
+  on('libro-cambiato', () => { $('#es-risultati').replaceChildren(); disegnaRecenti(); disegnaFiltri(); });
   disegnaRecenti();
   disegnaFiltri();
 }
@@ -36,7 +37,7 @@ export function initEsercizi() {
 export async function mostraElenco(contenitore, voci) {
   const tessere = [];
   for (const v of voci) {
-    const st = (await db.get('stato', chiave(v.p, v.es))) || {};
+    const st = (await ldb.get('stato', chiave(v.p, v.es))) || {};
     tessere.push(el('button', { class: 'tessera' + (st.fatto ? ' fatta' : ''), onclick: () => apriEsercizio(v.p, v.es) },
       el('span', { class: 'tessera-num' }, `es. ${v.es}`),
       el('span', { class: 'tessera-pag' }, `p. ${v.p}`),
@@ -46,17 +47,17 @@ export async function mostraElenco(contenitore, voci) {
 }
 
 async function aggiungiRecenti(voci) {
-  const r = (await db.get('kv', 'recenti')) || [];
+  const r = (await ldb.get('kv', 'recenti')) || [];
   const nuovi = [...voci, ...r.filter(x => !voci.some(v => v.p === x.p && v.es === x.es))].slice(0, 24);
-  await db.set('kv', 'recenti', nuovi);
+  await ldb.set('kv', 'recenti', nuovi);
 }
 async function disegnaRecenti() {
-  const r = (await db.get('kv', 'recenti')) || [];
+  const r = (await ldb.get('kv', 'recenti')) || [];
   $('#es-recenti-box').hidden = !r.length;
   mostraElenco($('#es-recenti'), r);
 }
 async function disegnaFiltri() {
-  const tutti = await db.all('stato');
+  const tutti = await ldb.all('stato');
   const voce = k => { const [p, es] = k.split('-').map(Number); return { p, es }; };
   const diff = tutti.filter(([, s]) => s.difficile).map(([k]) => voce(k));
   const pref = tutti.filter(([, s]) => s.preferito).map(([k]) => voce(k));
@@ -77,23 +78,24 @@ export function initCompiti() {
     if (!voci.length) { toast('Scrivi per esempio: p. 546 es. 12, 15, 20'); return; }
     const id = `c${Date.now()}`;
     const per = $('#compiti-data').value || null;
-    await db.set('compiti', id, { id, testo, per, creato: Date.now(), voci });
+    await ldb.set('compiti', id, { id, testo, per, creato: Date.now(), voci });
     $('#compiti-testo').value = '';
     disegnaCompiti();
     toast(`Lista creata: ${voci.length} esercizi`);
   });
   on('stato-esercizi', disegnaCompiti);
+  on('libro-cambiato', disegnaCompiti);
   disegnaCompiti();
 }
 
 async function disegnaCompiti() {
-  const liste = (await db.all('compiti')).map(([, v]) => v).sort((a, b) => b.creato - a.creato);
+  const liste = (await ldb.all('compiti')).map(([, v]) => v).sort((a, b) => b.creato - a.creato);
   const box = $('#compiti-liste');
   if (!liste.length) { box.replaceChildren(el('p', { class: 'vuoto' }, 'Nessuna lista. Scrivi i compiti qui sopra.')); return; }
   const blocchi = [];
   for (const l of liste) {
     let fatti = 0;
-    for (const v of l.voci) if ((await db.get('stato', chiave(v.p, v.es)))?.fatto) fatti++;
+    for (const v of l.voci) if ((await ldb.get('stato', chiave(v.p, v.es)))?.fatto) fatti++;
     const griglia = el('div', { class: 'griglia-tessere' });
     mostraElenco(griglia, l.voci);
     const data = l.per ? new Date(l.per + 'T12:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }) : null;
@@ -102,7 +104,7 @@ async function disegnaCompiti() {
         el('div', {}, el('h3', {}, l.testo), el('p', { class: 'nota' }, `${data ? 'Per ' + data : 'Senza data'} · ${fatti}/${l.voci.length} fatti`)),
         el('button', { class: 'btn-icona', 'aria-label': 'Elimina lista', onclick: async () => {
           if (await conferma('Eliminare questa lista di compiti? (gli esercizi restano segnati come fatti)', { si: 'Elimina', pericolo: true })) {
-            await db.del('compiti', l.id); disegnaCompiti();
+            await ldb.del('compiti', l.id); disegnaCompiti();
           }
         } }, '🗑')),
       el('div', { class: 'barra-progresso' }, el('div', { style: { width: `${100 * fatti / l.voci.length}%` } })),
@@ -116,33 +118,35 @@ async function disegnaCompiti() {
 // ---------------------------------------------------------------------
 export function initProgressi() {
   on('stato-esercizi', disegnaProgressi);
-  on('mostra-vista', v => { if (v === 'progressi') disegnaProgressi(); });
+  on('vista-mostrata', v => { if (v === 'progressi') disegnaProgressi(); });
 }
 
 async function disegnaProgressi() {
   await caricaIndici();
-  const stati = new Map(await db.all('stato'));
+  const stati = new Map(await ldb.all('stato'));
   const perUnita = new Map();
-  for (const v of tuttiGliEsercizi()) {
-    if (!perUnita.has(v.u)) perUnita.set(v.u, { tot: 0, fatti: 0, diff: 0 });
-    const x = perUnita.get(v.u);
-    x.tot++;
-    const s = stati.get(chiave(v.p, v.es));
-    if (s?.fatto) x.fatti++;
-    if (s?.difficile) x.diff++;
+  const conta = n => { if (!perUnita.has(n)) perUnita.set(n, { tot: 0, fatti: 0, diff: 0 }); return perUnita.get(n); };
+  const indicizzati = tuttiGliEsercizi();
+  for (const v of indicizzati) conta(v.u).tot++;
+  for (const [k, s] of stati) {
+    const p = Number(k.split('-')[0]);
+    const x = conta(unitaDiPagina(p)?.n ?? 0);
+    if (s.fatto) x.fatti++;
+    if (s.difficile) x.diff++;
   }
   let totFatti = 0, tot = 0;
-  const righe = UNITA.map(u => {
+  const unita = UNITA.length ? UNITA : [{ n: 0, titolo: 'Tutto il libro', esercizi: LIBRO.primaPaginaLibro }];
+  const righe = unita.map(u => {
     const x = perUnita.get(u.n) || { tot: 0, fatti: 0, diff: 0 };
     totFatti += x.fatti; tot += x.tot;
     const perc = x.tot ? Math.round(100 * x.fatti / x.tot) : 0;
-    return el('button', { class: 'riga-unita', onclick: () => emit('vai-pagina', { pdf: libroToPdf(u.esercizi) }) },
-      el('span', { class: 'u-num' }, u.n),
-      el('span', { class: 'u-nome' }, u.titolo, el('small', {}, `${x.fatti} fatti su ${x.tot}` + (x.diff ? ` · ${x.diff} difficili` : ''))),
+    return el('button', { class: 'riga-unita', onclick: () => emit('vai-pagina', { pdf: libroToPdf(u.esercizi || u.inizio) }) },
+      el('span', { class: 'u-num' }, u.n || '📘'),
+      el('span', { class: 'u-nome' }, u.titolo, el('small', {}, (x.tot ? `${x.fatti} fatti su ${x.tot}` : `${x.fatti} fatti`) + (x.diff ? ` · ${x.diff} difficili` : ''))),
       el('span', { class: 'barra-progresso piccola' }, el('div', { style: { width: `${perc}%` } })),
-      el('span', { class: 'u-perc' }, `${perc}%`));
+      el('span', { class: 'u-perc' }, x.tot ? `${perc}%` : ''));
   });
-  $('#progressi-totale').textContent = `${totFatti} esercizi fatti su ${tot}`;
+  $('#progressi-totale').textContent = tot ? `${totFatti} esercizi fatti su ${tot}` : `${totFatti} esercizi fatti`;
   $('#progressi-unita').replaceChildren(...righe);
 }
 
@@ -176,14 +180,16 @@ async function disegnaCapitoli() {
         u.esercizi ? el('button', { onclick: () => vai(libroToPdf(u.esercizi)) }, `Esercizi p. ${u.esercizi}`) : '',
         u.autoverifica ? el('button', { onclick: () => vai(libroToPdf(u.autoverifica)) }, `Autoverifica p. ${u.autoverifica}`) : ''));
   });
-  lista.push(el('li', {},
-    el('button', { class: 'cap-titolo', onclick: () => vai(LIBRO.u18.primaPdf) }, el('b', {}, 'Unità 18'), ` ${U18.titolo}`, el('small', {}, `1/${LIBRO.u18.pagine}–${LIBRO.u18.pagine}/${LIBRO.u18.pagine}`))));
-  lista.push(el('li', {},
-    el('button', { class: 'cap-titolo', onclick: () => vai(libroToPdf(RISPOSTE_AUTOVERIFICA)) }, el('b', {}, 'Risposte autoverifiche'), el('small', {}, `p. ${RISPOSTE_AUTOVERIFICA}`)),
-    el('button', { class: 'cap-titolo', onclick: () => vai(LIBRO.indiceAnalitico.pdf[0]) }, el('b', {}, 'Indice analitico'), el('small', {}, `p. ${LIBRO.indiceAnalitico.libro[0]}`))));
+  if (LIBRO.u18) lista.push(el('li', {},
+    el('button', { class: 'cap-titolo', onclick: () => vai(LIBRO.u18.primaPdf) }, el('b', {}, 'Unità 18'), ` ${LIBRO.u18.titolo}`, el('small', {}, `1/${LIBRO.u18.pagine}–${LIBRO.u18.pagine}/${LIBRO.u18.pagine}`))));
+  const extra = [];
+  if (LIBRO.risposteAutoverifica) extra.push(el('button', { class: 'cap-titolo', onclick: () => vai(libroToPdf(LIBRO.risposteAutoverifica)) }, el('b', {}, 'Risposte autoverifiche'), el('small', {}, `p. ${LIBRO.risposteAutoverifica}`)));
+  if (LIBRO.indiceAnalitico) extra.push(el('button', { class: 'cap-titolo', onclick: () => vai(LIBRO.indiceAnalitico.pdf[0]) }, el('b', {}, 'Indice analitico'), el('small', {}, `p. ${LIBRO.indiceAnalitico.libro[0]}`)));
+  if (extra.length) lista.push(el('li', {}, ...extra));
+  if (!UNITA.length) lista.push(el('li', { class: 'vuoto' }, 'Questo libro non ha ancora i capitoli. Aggiungili da Altro → Questo libro.'));
   $('#lista-capitoli').replaceChildren(...lista);
 
-  const sl = (await db.get('kv', 'segnalibri')) || [];
+  const sl = (await ldb.get('kv', 'segnalibri')) || [];
   $('#lista-segnalibri').replaceChildren(...(sl.length ? sl.map(s =>
     el('li', {}, el('button', { class: 'cap-titolo', onclick: () => vai(s.pdf) }, `🔖 p. ${etichettaPagina(s.pdf)}`, el('small', {}, s.nome || '')),
       el('button', { class: 'btn-icona', 'aria-label': 'Togli segnalibro', onclick: async () => { await togliSegnalibro(s.pdf); disegnaCapitoli(); } }, '✕')))
@@ -191,23 +197,23 @@ async function disegnaCapitoli() {
 }
 
 async function toggleSegnalibro() {
-  const sl = (await db.get('kv', 'segnalibri')) || [];
+  const sl = (await ldb.get('kv', 'segnalibri')) || [];
   if (sl.some(s => s.pdf === stato.pagina)) { await togliSegnalibro(stato.pagina); toast('Segnalibro tolto'); }
   else {
     sl.push({ pdf: stato.pagina, nome: $('#titolo-unita').textContent, data: Date.now() });
     sl.sort((a, b) => a.pdf - b.pdf);
-    await db.set('kv', 'segnalibri', sl);
+    await ldb.set('kv', 'segnalibri', sl);
     toast(`Segnalibro a p. ${etichettaPagina(stato.pagina)}`);
   }
   aggiornaIconaSegnalibro();
 }
 async function togliSegnalibro(pdf) {
-  const sl = (await db.get('kv', 'segnalibri')) || [];
-  await db.set('kv', 'segnalibri', sl.filter(s => s.pdf !== pdf));
+  const sl = (await ldb.get('kv', 'segnalibri')) || [];
+  await ldb.set('kv', 'segnalibri', sl.filter(s => s.pdf !== pdf));
   aggiornaIconaSegnalibro();
 }
 async function aggiornaIconaSegnalibro() {
-  const sl = (await db.get('kv', 'segnalibri')) || [];
+  const sl = (await ldb.get('kv', 'segnalibri')) || [];
   $('#btn-segnalibro').classList.toggle('attivo', sl.some(s => s.pdf === stato.pagina));
 }
 
@@ -229,7 +235,7 @@ async function apriRicerca() {
   s.corpo.append(input, stato_, risultati);
   setTimeout(() => input.focus(), 50);
 
-  const pronte = new Set((await db.keys('testo')).map(Number));
+  const pronte = new Set((await ldb.keys('testo')).map(Number));
   const totale = stato.totalePagine;
   if (pronte.size < totale) {
     stato_.textContent = `Preparo la ricerca: ${pronte.size}/${totale} pagine (solo la prima volta)…`;
@@ -239,7 +245,7 @@ async function apriRicerca() {
         if (pronte.has(n)) continue;
         try {
           const pezzi = await testoPagina(stato.libro, n);
-          await db.set('testo', n, pezzi.map(x => x.str).join(' ').replace(/\s+/g, ' '));
+          await ldb.set('testo', n, pezzi.map(x => x.str).join(' ').replace(/\s+/g, ' '));
         } catch (e) { /* pagina senza testo */ }
         pronte.add(n);
         if (n % 10 === 0) stato_.textContent = `Preparo la ricerca: ${pronte.size}/${totale} pagine (solo la prima volta)…`;
@@ -253,11 +259,11 @@ async function apriRicerca() {
   async function cerca() {
     const q = input.value.trim().toLowerCase();
     if (q.length < 3) { risultati.replaceChildren(); return; }
-    const tutte = await db.all('testo');
+    const tutte = await ldb.all('testo');
     const trovate = [];
     for (const [n, t] of tutte) {
       const i = t.toLowerCase().indexOf(q);
-      if (i >= 0) trovate.push({ n, frase: '…' + t.slice(Math.max(0, i - 50), i + q.length + 60) + '…' });
+      if (i >= 0) trovate.push({ n: Number(n), frase: '…' + t.slice(Math.max(0, i - 50), i + q.length + 60) + '…' });
       if (trovate.length >= 80) break;
     }
     trovate.sort((a, b) => a.n - b.n);

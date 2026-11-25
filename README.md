@@ -1,13 +1,17 @@
 # 📘 Libro Vivo
 
-Web app per iPad (PWA) per studiare sul libro di matematica
-*Tutti i colori della Matematica — Blu 2*.
+Web app per iPad (PWA): una **libreria** con i libri di scuola.
+Il libro di matematica *Tutti i colori della Matematica — Blu 2* è già preparato
+(indice di tutti gli esercizi e soluzioni a passi); gli altri libri si aggiungono dall'app.
 Funziona **offline**: il libro e le soluzioni restano sull'iPad.
 
 ## Cosa fa
 
 | Funzione | Dove |
 |---|---|
+| Libreria: scegli il libro, "Riprendi da dove eri" | 📚 all'avvio |
+| Aggiungi libro: capitoli e numeri di pagina trovati da soli | 📚 → ➕ |
+| Sezioni del libro: leggi, capitoli, esercizi, compiti, progressi | 🏠 Sezioni |
 | Legge il libro, pagine **stampate** (non del PDF) | 📖 Libro |
 | Capitoli automatici (mappa pagine, PDF = libro + 18) | ☰ in alto |
 | Penna Apple Pencil, evidenziatore, gomma, annulla | ✏️ in alto |
@@ -47,9 +51,10 @@ sw.js               offline + aggiornamento SOLO a richiesta (non modificarlo se
 version.json        versione e lista dei file da salvare offline
 js/
   app.js            avvio, collega tutto
-  config.js         ⭐ dati del libro: unità, mappa pagine (cambia questo per un altro libro)
+  config.js         ⭐ libro di matematica + funzioni pagine (LIBRO/UNITA = libro aperto ora)
+  libreria.js       libreria, aggiungi libro, sezioni, impostazioni libro
   stato.js          stato condiviso, eventi, ultima pagina, impostazioni
-  db.js             salvataggio su IndexedDB
+  db.js             salvataggio su IndexedDB (ldb = dati del libro aperto, chiavi "idLibro:…")
   pdf.js            apre e disegna i PDF (pdf.js), ritagli ad alta risoluzione
   lettore.js        visualizzatore pagine, zoom, scorrimento
   penna.js          Apple Pencil

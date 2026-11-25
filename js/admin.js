@@ -9,8 +9,8 @@
 //  usa l'iPad). Non è una cassaforte: i dati sono comunque sull'iPad.
 // =====================================================================
 import { el, toast, apriScheda, chiediTesto, conferma, scegliFile, scaricaFile } from './ui.js';
-import { db } from './db.js';
-import { stato } from './stato.js';
+import { db, ldb } from './db.js';
+import { stato, elencoLibri, salvaLibroDef } from './stato.js';
 import { UNITA, impostaUnita, LIBRO, pdfToLibro } from './config.js';
 import { importaFile, mostraRiepilogo, salvaSoluzioniJson } from './importa.js';
 import { caricaIndici, testoConFormule } from './esercizi.js';
@@ -54,7 +54,7 @@ async function mostra() {
   const c = s.corpo;
 
   // --- Soluzioni per unità ---
-  const kv = new Map(await db.all('kv'));
+  const kv = new Map(await ldb.all('kv'));
   const righe = UNITA.map(u => {
     const j = kv.get(`soluzioniJson-${u.n}`);
     return el('tr', {},
@@ -87,7 +87,7 @@ async function mostra() {
   };
   f.passi.oninput = aggiornaAnteprima; f.risultato.oninput = aggiornaAnteprima;
   const carica = async () => {
-    const sol = await db.get('soluzioni', `${f.pagina.value}-${f.es.value}`);
+    const sol = await ldb.get('soluzioni', `${f.pagina.value}-${f.es.value}`);
     if (sol) { f.risultato.value = sol.risultato || ''; f.passi.value = (sol.passi || []).join('\n'); aggiornaAnteprima(); toast('Soluzione caricata: puoi correggerla'); }
     else toast('Nessuna soluzione a passi: scrivila tu');
   };
@@ -101,7 +101,7 @@ async function mostra() {
     el('div', { class: 'riga-bottoni sinistra' }, el('button', { class: 'btn primario', onclick: async () => {
       const pagina = Number(f.pagina.value), es = Number(f.es.value);
       if (!pagina || !es) { toast('Scrivi pagina ed esercizio'); return; }
-      const vecchia = (await db.get('soluzioni', `${pagina}-${es}`)) || {};
+      const vecchia = (await ldb.get('soluzioni', `${pagina}-${es}`)) || {};
       await salvaSoluzioniJson([{ ...vecchia, pagina, es, risultato: f.risultato.value, passi: f.passi.value.split('\n').map(x => x.trim()).filter(Boolean), corretta: Date.now() }]);
       toast(`Salvata p. ${pagina} es. ${es}`);
     } }, '💾 Salva soluzione'))));
@@ -111,7 +111,7 @@ async function mostra() {
     el('h3', {}, 'Condividi le soluzioni'),
     el('p', { class: 'nota' }, 'Crea un file .json con tutte le soluzioni a passi (anche quelle corrette a mano), da dare a un amico.'),
     el('button', { class: 'btn', onclick: async () => {
-      const tutte = (await db.all('soluzioni')).map(([, v]) => v);
+      const tutte = (await ldb.all('soluzioni')).map(([, v]) => v);
       scaricaFile('soluzioni_libro_vivo.json', new Blob([JSON.stringify(tutte)], { type: 'application/json' }));
     } }, '⬆️ Esporta tutte le soluzioni')));
 
@@ -134,7 +134,7 @@ async function mostra() {
       } }, 'Carica indice'),
       el('button', { class: 'btn', onclick: async () => {
         if (!await conferma('Tornare agli indici originali dell\'app?')) return;
-        await db.del('kv', 'indiceEsercizi'); await db.del('kv', 'indiceSoluzioni'); await caricaIndici(); toast('Indici originali');
+        await ldb.del('kv', 'indiceEsercizi'); await ldb.del('kv', 'indiceSoluzioni'); await caricaIndici(); toast('Indici originali');
       } }, 'Indici originali'))));
 
   // --- Password ---
@@ -186,7 +186,8 @@ async function rilevaCapitoli(esito) {
     diverse.length ? el('button', { class: 'btn primario', onclick: async () => {
       const nuove = lista.map(({ n, inizio, autoverifica }) => ({ n, inizio, autoverifica }));
       impostaUnita(nuove);
-      await db.set('kv', 'capitoli', nuove);
+      const def = (await elencoLibri()).find(l => l.id === stato.idLibro);
+      await salvaLibroDef({ ...def, unita: UNITA.map(u => ({ ...u })) });
       toast('Capitoli aggiornati');
     } }, 'Usa i capitoli rilevati') : '');
 }

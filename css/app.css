@@ -264,3 +264,49 @@ textarea.campo { resize: vertical; }
   .naviga { flex: 1; justify-content: center; }
   .btn-icona { min-width: 38px; }
 }
+
+/* ---------- libreria ---------- */
+body[data-vista="libreria"] #barra-schede { display: none; }
+body[data-vista="libreria"] main { bottom: env(safe-area-inset-bottom); }
+.libreria-testa { display: flex; justify-content: space-between; align-items: center; }
+.riprendi {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; border: 0; border-radius: var(--raggio);
+  background: var(--primario); color: var(--primario-testo); padding: 14px 18px; margin-bottom: 18px; box-shadow: var(--ombra);
+}
+.riprendi small { display: block; opacity: .85; }
+.riprendi b { font-size: 1.1rem; }
+.riprendi-icona { width: 42px; height: 42px; border-radius: 50%; background: rgba(255,255,255,.2); display: grid; place-items: center; font-size: 1.1rem; flex: none; }
+.griglia-libri { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 18px; }
+.libro-card { border: 0; background: none; padding: 0; text-align: left; display: flex; flex-direction: column; gap: 8px; }
+.libro-card:active { transform: scale(.98); }
+.copertina {
+  aspect-ratio: 3 / 4; width: 100%; border-radius: 10px; box-shadow: var(--ombra); display: grid; place-items: center;
+  color: #fff; font: 800 1.6rem/1 inherit; letter-spacing: .05em; overflow: hidden; border: 1px solid var(--bordo);
+}
+.libro-card.aggiungi .copertina { background: var(--superficie-2); color: var(--testo-2); border: 2px dashed var(--bordo); box-shadow: none; font-size: 2.6rem; }
+.libro-info b { display: block; }
+.libro-info small { display: block; color: var(--testo-2); font-size: .82rem; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.libro-info small.da-importare { color: var(--arancio); }
+
+/* ---------- sezioni del libro ---------- */
+.torna-libreria { min-height: 36px; padding: 4px 12px; margin-bottom: 10px; }
+#vista-libreria .torna-libreria { display: none; }
+.home-testa { display: flex; gap: 18px; align-items: center; margin-bottom: 18px; }
+.home-testa h1 { margin: 0; font-size: 1.4rem; }
+.home-testa p { margin: 2px 0; }
+.copertina.piccola { width: 84px; flex: none; }
+.griglia-sezioni { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.sezione {
+  border: 1px solid var(--bordo); background: var(--superficie); border-radius: var(--raggio); padding: 16px;
+  text-align: left; display: flex; flex-direction: column; gap: 2px; min-height: 110px;
+}
+.sezione small { color: var(--testo-2); }
+.sezione-icona { font-size: 1.8rem; margin-bottom: 4px; }
+.sezione.evidenzia { background: var(--primario); border-color: var(--primario); color: var(--primario-testo); grid-column: span 2; }
+.sezione.evidenzia small { color: inherit; opacity: .85; }
+@media (max-width: 420px) { .sezione.evidenzia { grid-column: span 1; } }
+.riga-capitolo { border-bottom: 1px solid var(--bordo); padding: 4px 0; }
+.riga-capitolo:last-child { border-bottom: 0; }
+.cap-principale { display: flex; gap: 12px; align-items: center; width: 100%; border: 0; background: none; padding: 8px 10px; text-align: left; }
+.riga-capitolo .cap-link { padding-left: 54px; }
+.elenco-corto { max-height: 240px; overflow-y: auto; }

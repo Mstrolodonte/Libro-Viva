@@ -3,15 +3,16 @@
 //  aspetto, backup, aggiornamento dell'app, admin.
 // =====================================================================
 import { $, el, toast, apriScheda, conferma, scegliFile, mb } from './ui.js';
-import { db, spazioUsato, chiediSpazioPersistente } from './db.js';
+import { db, ldb, spazioUsato, chiediSpazioPersistente } from './db.js';
 import { stato, on, elencoFile, eliminaPdf, impostazioni, salvaImpostazione } from './stato.js';
-import { UNITA } from './config.js';
+import { UNITA, LIBRO } from './config.js';
+import { apriImpostazioniLibro } from './libreria.js';
 import { importaFile, mostraRiepilogo, controllaAggiornamenti, scaricaDalServer } from './importa.js';
 import { esportaBackup } from './backup.js';
 import { apriAdmin } from './admin.js';
 
 export function initAltro() {
-  on('mostra-vista', v => { if (v === 'altro') disegna(); });
+  on('vista-mostrata', v => { if (v === 'altro') disegna(); });
   on('file-cambiati', () => { if ($('#vista-altro').classList.contains('attiva')) disegna(); });
 }
 
@@ -46,11 +47,10 @@ export function guidaDisco() {
     <p class="nota">Il libro è grande (~130 MB): la prima copia può richiedere qualche minuto.</p>`;
 }
 
-async function disegna() {
-  const box = $('#altro-contenuto');
+async function disegna(box = $('#altro-contenuto'), { soloApp = false } = {}) {
   const imp = impostazioni();
   const files = await elencoFile();
-  const kv = new Map(await db.all('kv'));
+  const kv = new Map(await ldb.all('kv'));
   const versione = await versioneInstallata();
   const spazio = await spazioUsato();
   const persistente = navigator.storage?.persisted ? await navigator.storage.persisted() : false;
@@ -58,11 +58,12 @@ async function disegna() {
   // --- Libro ---
   const libro = files.libro;
   const cardLibro = el('section', { class: 'card' },
-    el('h3', {}, '📘 Libro'),
+    el('h3', {}, `📘 ${LIBRO.materia || 'Libro'}: ${LIBRO.titolo}`),
     libro ? el('p', {}, `✅ ${libro.nome} · ${mb(libro.dimensione)} · copiato il ${new Date(libro.importato).toLocaleDateString('it-IT')}`)
       : el('p', { class: 'avviso' }, 'Il libro non è ancora sul dispositivo.'),
     el('div', { class: 'riga-bottoni sinistra' },
       el('button', { class: 'btn primario', onclick: () => importaDalDisco() }, '📂 Importa dal disco'),
+      el('button', { class: 'btn', onclick: () => apriImpostazioniLibro() }, '⚙️ Impostazioni libro'),
       el('button', { class: 'btn', onclick: guidaDisco }, '❓ Come collego il disco del modem')));
 
   // --- Soluzioni per unità ---
@@ -127,6 +128,7 @@ async function disegna() {
   const cardAspetto = el('section', { class: 'card' },
     el('h3', {}, '🎨 Aspetto e penna'),
     el('label', { class: 'etichetta' }, 'Tema', scelta('tema', [['auto', 'Automatico (come l\'iPad)'], ['chiaro', 'Chiaro'], ['scuro', 'Scuro']])),
+    el('label', { class: 'etichetta' }, 'All\'apertura dell\'app', scelta('avvio', [['libreria', 'Mostra la libreria'], ['ultima', 'Riapri l\'ultima pagina letta']])),
     el('label', { class: 'etichetta' }, 'Pagina', scelta('adatta', [['larghezza', 'Adatta alla larghezza'], ['pagina', 'Pagina intera']])),
     interruttore('pagineScure', 'Pagine scure nel tema scuro (inverte i colori del libro)'),
     interruttore('soloPencil', 'Solo l\'Apple Pencil scrive (il dito sfoglia)'));
@@ -157,7 +159,14 @@ async function disegna() {
     el('p', { class: 'nota' }, 'Carica le soluzioni corrette per ogni unità, gli indici e i capitoli. Serve la password.'),
     el('button', { class: 'btn', onclick: apriAdmin }, 'Entra nell\'area admin'));
 
-  box.replaceChildren(cardLibro, cardSol, cardAspetto, cardBackup, cardServer, cardApp, cardAdmin);
+  if (soloApp) box.replaceChildren(cardAspetto, cardBackup, cardApp, cardAdmin);
+  else box.replaceChildren(cardLibro, ...(UNITA.length && (LIBRO.indiciApp || Object.keys(files).length > 1) ? [cardSol] : []), cardAspetto, cardBackup, cardServer, cardApp, cardAdmin);
+}
+
+/** Impostazioni generali dell'app (dalla libreria) */
+export function apriImpostazioniApp() {
+  const s = apriScheda('⚙️ Impostazioni app', { larga: true });
+  disegna(s.corpo, { soloApp: true });
 }
 
 // ---------------------------------------------------------------------

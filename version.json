@@ -1,7 +1,7 @@
 {
- "versione": "1.0.0",
+ "versione": "1.1.0",
  "data": "2026-11-25",
- "novita": "Prima versione",
+ "novita": "Libreria con più libri, importazione file più sicura su iPad",
  "file": [
   "index.html",
   "manifest.webmanifest",
@@ -20,6 +20,7 @@
   "js/esercizi.js",
   "js/importa.js",
   "js/lettore.js",
+  "js/libreria.js",
   "js/pdf.js",
   "js/penna.js",
   "js/stato.js",

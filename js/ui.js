@@ -101,13 +101,34 @@ export function scaricaFile(nome, blob) {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 }
 
-/** Apre il selettore file (sull'iPad apre l'app File) */
+/** iPad / iPhone (anche iPad che si presenta come Mac) */
+export const eIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+/**
+ * Apre il selettore file (sull'iPad apre l'app File).
+ * Su iPad usiamo un unico <input> sempre presente nella pagina, non nascosto
+ * con display:none e SENZA filtro "accept": con alcuni filtri il selettore
+ * di iOS non si apre o fa chiudere l'app. I file sbagliati li scartiamo noi.
+ */
+let inputFile = null;
 export function scegliFile({ accept = '', multiplo = false } = {}) {
   return new Promise(resolve => {
-    const input = el('input', { type: 'file', accept, style: { display: 'none' } });
-    if (multiplo) input.multiple = true;
-    input.onchange = () => { resolve([...input.files]); input.remove(); };
-    document.body.append(input);
+    if (!inputFile) {
+      inputFile = document.createElement('input');
+      inputFile.type = 'file';
+      inputFile.setAttribute('aria-hidden', 'true');
+      Object.assign(inputFile.style, { position: 'fixed', left: '-1000px', top: '0', width: '1px', height: '1px', opacity: '0' });
+      document.body.append(inputFile);
+    }
+    const input = inputFile;
+    input.value = '';
+    if (eIOS || !accept) input.removeAttribute('accept'); else input.accept = accept;
+    input.multiple = !!multiplo;
+    let fatto = false;
+    const fine = files => { if (!fatto) { fatto = true; resolve(files); } };
+    input.onchange = () => fine([...input.files]);
+    input.oncancel = () => fine([]);
     input.click();
   });
 }
