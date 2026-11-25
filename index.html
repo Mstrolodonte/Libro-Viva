@@ -131,41 +131,27 @@
     </div>
   </section>
 
-  <!-- ============ ESERCIZI ============ -->
+  <!-- ============ ESERCIZI E COMPITI (una sola sezione) ============ -->
   <section id="vista-esercizi" class="vista pagina-testo">
     <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
-    <h1>Esercizi</h1>
-    <form id="form-esercizi" class="card form-ricerca" autocomplete="off">
-      <label class="etichetta">Pagina del libro
-        <input id="es-pagina" class="campo" type="number" inputmode="numeric" placeholder="546" min="2" max="917">
+    <h1>Esercizi e compiti</h1>
+    <form id="form-esercizi" class="card" autocomplete="off">
+      <label class="etichetta">Quali esercizi? Scrivili come li detta il prof
+        <textarea id="es-testo" class="campo" rows="2" placeholder="p. 546 es. 12, 15, 20-22; p. 547 es. 3"></textarea>
       </label>
-      <label class="etichetta">Esercizio (anche più di uno)
-        <input id="es-numeri" class="campo" inputmode="numeric" placeholder="12, 15, 20-22">
-      </label>
-      <button class="btn primario">🔍 Cerca</button>
-      <p class="nota larga">Uso la pagina stampata sul libro. Se l'esercizio non è lì, lo cerco nelle pagine vicine (±5, poi sempre più lontano).</p>
+      <div class="riga-campi">
+        <button class="btn primario">🔍 Mostra tutti</button>
+        <button id="btn-es-pdf" type="button" class="btn">📄 Crea PDF</button>
+        <label class="etichetta stretta">Compiti per il giorno <input id="es-data" class="campo" type="date"></label>
+        <button id="btn-es-salva" type="button" class="btn">💾 Salva nei compiti</button>
+      </div>
+      <p class="nota">Va bene anche "546 12 15" o una pagina per riga. Uso la pagina stampata: se l'esercizio non è lì, lo cerco nelle pagine vicine.</p>
     </form>
-    <div id="es-risultati" class="griglia-tessere"></div>
+    <div id="es-risultati"></div>
+    <div id="compiti-box"><h2>📅 I miei compiti</h2><div id="compiti-liste"></div></div>
     <div id="es-recenti-box" hidden><h2>Recenti</h2><div id="es-recenti" class="griglia-tessere"></div></div>
     <div id="es-difficili-box" hidden><h2>⚠️ Difficili</h2><div id="es-difficili" class="griglia-tessere"></div></div>
     <div id="es-preferiti-box" hidden><h2>⭐ Preferiti</h2><div id="es-preferiti" class="griglia-tessere"></div></div>
-  </section>
-
-  <!-- ============ COMPITI ============ -->
-  <section id="vista-compiti" class="vista pagina-testo">
-    <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
-    <h1>Compiti</h1>
-    <form id="form-compiti" class="card" autocomplete="off">
-      <label class="etichetta">Scrivi i compiti come li detta il prof
-        <input id="compiti-testo" class="campo" placeholder="p. 546 es. 12, 15, 20; p. 547 es. 3-5">
-      </label>
-      <div class="riga-campi">
-        <label class="etichetta">Per il giorno <input id="compiti-data" class="campo" type="date"></label>
-        <button class="btn primario">➕ Crea lista</button>
-        <button id="btn-compiti-pdf" type="button" class="btn">📄 Crea PDF</button>
-      </div>
-    </form>
-    <div id="compiti-liste"></div>
   </section>
 
   <!-- ============ PROGRESSI ============ -->
@@ -190,7 +176,6 @@
   <button data-vista="home"><span><svg class="ic"><use href="#i-sezioni"/></svg></span>Sezioni</button>
   <button data-vista="libro"><span><svg class="ic"><use href="#i-leggi"/></svg></span>Leggi</button>
   <button data-vista="esercizi"><span><svg class="ic"><use href="#i-esercizi"/></svg></span>Esercizi</button>
-  <button data-vista="compiti"><span><svg class="ic"><use href="#i-compiti"/></svg></span>Compiti</button>
   <button data-vista="progressi"><span><svg class="ic"><use href="#i-progressi"/></svg></span>Progressi</button>
   <button data-vista="altro"><span><svg class="ic"><use href="#i-altro"/></svg></span>Altro</button>
 </nav>

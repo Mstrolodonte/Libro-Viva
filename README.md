@@ -20,8 +20,8 @@ Funziona **offline**: il libro e le soluzioni restano sull'iPad.
 | Riapre l'ultima pagina, anche dopo un crash | automatico |
 | Cerca un esercizio (pagina + numero, ±5 pagine e oltre) | 📝 Esercizi |
 | Scheda esercizio + **Mostra soluzione esercizio** (a passi) | tocca un esercizio |
-| Compiti del giorno ("p. 546 es. 12, 15, 20-22") | 📅 Compiti |
-| **PDF dei compiti**: ritagli ad alta risoluzione, quadretti, fino a 3 per pagina, risposte (e svolgimenti) in fondo | 📅 Compiti → 📄 |
+| Esercizi e compiti insieme: scrivi "p. 546 es. 12, 15, 20-22" e li vedi tutti uno sotto l'altro | 📝 Esercizi |
+| **PDF dei compiti**: ritagli ad alta risoluzione, quadretti, fino a 3 per pagina, risposte (e svolgimenti) in fondo | 📝 Esercizi → 📄 |
 | Fatto ✅ / Difficile ⚠️ / Preferito ⭐ e progressi per unità | 📊 Progressi |
 | Segnalibri, ricerca nel testo, tema scuro, zoom | in alto |
 | Importa uno **zip** con tutte le soluzioni JSON (es. Soluzioni_Matematica_Vol2.zip) | Importa |

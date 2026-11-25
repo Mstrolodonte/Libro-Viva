@@ -351,9 +351,8 @@ body[data-vista="libreria"] main { bottom: env(safe-area-inset-bottom); }
 .sezione-icona { width: 42px; height: 42px; border-radius: 12px; margin-bottom: 10px; background: var(--primario-chiaro); color: var(--primario); }
 .sezione-icona .ic { width: 24px; height: 24px; }
 .griglia-sezioni .sezione:nth-child(2) .sezione-icona { background: color-mix(in srgb, #8a4fd6 15%, var(--superficie)); color: #8a4fd6; }
-.griglia-sezioni .sezione:nth-child(3) .sezione-icona { background: color-mix(in srgb, var(--arancio) 16%, var(--superficie)); color: var(--arancio); }
-.griglia-sezioni .sezione:nth-child(4) .sezione-icona { background: color-mix(in srgb, var(--verde) 15%, var(--superficie)); color: var(--verde); }
-.griglia-sezioni .sezione:nth-child(5) .sezione-icona { background: var(--superficie-2); color: var(--testo-2); }
+.griglia-sezioni .sezione:nth-child(3) .sezione-icona { background: color-mix(in srgb, var(--verde) 15%, var(--superficie)); color: var(--verde); }
+.griglia-sezioni .sezione:nth-child(4) .sezione-icona { background: var(--superficie-2); color: var(--testo-2); }
 .sezione.evidenzia {
   background: linear-gradient(135deg, color-mix(in srgb, var(--primario) 80%, #fff) 0%, var(--primario) 55%);
   border-color: transparent; color: var(--primario-testo); grid-column: span 2; box-shadow: 0 8px 24px color-mix(in srgb, var(--primario) 35%, transparent);
@@ -367,3 +366,14 @@ body[data-vista="libreria"] main { bottom: env(safe-area-inset-bottom); }
 .cap-principale { display: flex; gap: 12px; align-items: center; width: 100%; border: 0; background: none; padding: 8px 10px; text-align: left; }
 .riga-capitolo .cap-link { padding-left: 54px; }
 .elenco-corto { max-height: 240px; overflow-y: auto; }
+
+/* ---------- esercizi e compiti ---------- */
+#es-testo { font-size: 1.05rem; min-height: 64px; }
+.etichetta.stretta { flex: 0 1 220px; }
+.elenco-testa { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin: 18px 0 8px; }
+.elenco-testa h2 { margin: 0; }
+.elenco-testa .riga-bottoni { margin: 0; }
+.esercizio-card h3 { color: var(--primario); }
+.esercizio-card .ritaglio { margin: 6px 0 10px; }
+.esercizio-card .riga-bottoni { margin: 8px 0 0; }
+#compiti-box { margin-top: 26px; }

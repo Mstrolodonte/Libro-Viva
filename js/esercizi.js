@@ -148,10 +148,20 @@ export async function apriEsercizio(p, es) {
   return mostraScheda(ris);
 }
 
-async function mostraScheda({ voce, cercata, trovata }) {
+async function mostraScheda(ris) {
+  const s = apriScheda(`p. ${ris.voce.p} · es. ${ris.voce.es}`, { larga: true });
+  s.corpo.append(await contenutoEsercizio(ris, { alVaiPagina: () => s.chiudi() }));
+}
+
+/**
+ * Contenuto di un esercizio: ritaglio + Fatto/Difficile/Preferito +
+ * Vai alla pagina + Mostra soluzione. Serve sia per la scheda sia per
+ * l'elenco "tutti gli esercizi insieme".
+ * ris = { voce, cercata, trovata } (da cercaEsercizio)
+ */
+export async function contenutoEsercizio({ voce, cercata, trovata }, { alVaiPagina = () => {}, larghezza } = {}) {
   const { p, es } = voce;
-  const s = apriScheda(`p. ${p} · es. ${es}`, { larga: true });
-  const c = s.corpo;
+  const c = el('div', { class: 'contenuto-esercizio' });
 
   if (trovata !== cercata) {
     c.append(el('p', { class: 'nota' }, `ℹ️ A pagina ${cercata} non c'era: l'ho trovato a pagina ${trovata}.`));
@@ -161,17 +171,21 @@ async function mostraScheda({ voce, cercata, trovata }) {
   // ritaglio dell'esercizio (+ consegna sopra, se c'è) ad alta risoluzione
   const box = el('div', { class: 'ritaglio' }, el('div', { class: 'carica' }, 'Carico…'));
   c.append(box);
-  const larg = Math.min(900, window.innerWidth - 60);
-  (async () => {
+  // nell'elenco: non più di 1,7 volte la grandezza del libro (testo leggibile ma non enorme)
+  const larg = larghezza ? Math.min(larghezza, (voce.b[2] - voce.b[0]) * 1.7) : Math.min(900, window.innerWidth - 60);
+  const pronto = (async () => {
     const pezzi = [];
     if (voce.c && voce.c[3] <= voce.b[1] + 2) {
       const lc = larg * (voce.c[2] - voce.c[0]) / (voce.b[2] - voce.b[0]);
       const cc = await ritaglio(stato.libro, voce.pdf, voce.c, lc);
-      cc.style.width = `${Math.min(100, 100 * (voce.c[2] - voce.c[0]) / (voce.b[2] - voce.b[0]))}%`;
+      cc.style.width = larghezza ? `${lc}px` : `${Math.min(100, 100 * (voce.c[2] - voce.c[0]) / (voce.b[2] - voce.b[0]))}%`;
+      cc.style.maxWidth = '100%';
       cc.classList.add('consegna');
       pezzi.push(cc);
     }
-    pezzi.push(await ritaglio(stato.libro, voce.pdf, voce.b, larg));
+    const cb = await ritaglio(stato.libro, voce.pdf, voce.b, larg);
+    if (larghezza) { cb.style.width = `${larg}px`; cb.style.maxWidth = '100%'; }
+    pezzi.push(cb);
     box.replaceChildren(...pezzi);
   })().catch(e => { box.textContent = 'Errore nel ritaglio: ' + e.message; });
 
@@ -187,7 +201,7 @@ async function mostraScheda({ voce, cercata, trovata }) {
     return b;
   };
   const zonaSol = el('div', { class: 'zona-soluzione' });
-  const btnSol = el('button', { class: 'btn primario grande' }, '💡 Mostra soluzione esercizio');
+  const btnSol = el('button', { class: 'btn primario' }, '💡 Mostra soluzione esercizio');
   btnSol.onclick = () => { btnSol.hidden = true; mostraSoluzione(voce, zonaSol); };
 
   c.append(
@@ -195,9 +209,11 @@ async function mostraScheda({ voce, cercata, trovata }) {
       bottoneStato('fatto', '✅ Fatto'),
       bottoneStato('difficile', '⚠️ Difficile'),
       bottoneStato('preferito', '⭐ Preferito'),
-      el('button', { class: 'btn chip', onclick: () => { s.chiudi(); emit('vai-pagina', { pdf: voce.pdf, evidenzia: voce.b }); } }, '📖 Vai alla pagina')),
-    btnSol,
+      el('button', { class: 'btn chip', onclick: () => { alVaiPagina(); emit('vai-pagina', { pdf: voce.pdf, evidenzia: voce.b }); } }, '📖 Vai alla pagina'),
+      btnSol),
     zonaSol);
+  c.pronto = pronto;
+  return c;
 }
 
 // ---------------------------------------------------------------------
@@ -305,16 +321,21 @@ function soluzioneAPassi(sol, zona) {
 //  Lettura di una richiesta tipo "p. 546 es. 12, 15, 20-22; p. 547 es. 3"
 // ---------------------------------------------------------------------
 export function leggiRichiesta(testo) {
+  // Accetta: "p. 546 es. 12, 15, 20-22; p. 547 es. 3", "pag 546 n 12 e 15",
+  // "546 12 15", "546/12", una pagina per riga…
+  // Regola: in ogni gruppo il PRIMO numero è la pagina, gli altri sono esercizi.
   const out = [];
-  const re = /p(?:ag(?:ina)?)?\.?\s*(\d+)\s*[,:]?\s*(?:es(?:ercizi|ercizio)?\.?\s*)?((?:\d+\s*(?:[-–]\s*\d+)?\s*(?:,|e|\s)\s*)*\d+(?:\s*[-–]\s*\d+)?)/gi;
-  let m;
-  while ((m = re.exec(testo))) {
-    const p = Number(m[1]);
-    for (const pezzo of m[2].split(/\s*(?:,|\be\b|\s)\s*/)) {
-      if (!pezzo) continue;
-      const r = pezzo.match(/^(\d+)\s*[-–]\s*(\d+)$/);
-      if (r) { for (let i = Number(r[1]); i <= Number(r[2]) && i - Number(r[1]) < 60; i++) out.push({ p, es: i }); }
-      else if (/^\d+$/.test(pezzo)) out.push({ p, es: Number(pezzo) });
+  const t = String(testo).toLowerCase().replace(/[–—]/g, '-');
+  const gruppi = t.split(/[;\n]+|(?=\bp(?:ag(?:ina)?|g)?\.?\s*\d)/);
+  for (const g of gruppi) {
+    const numeri = [...g.matchAll(/(\d+)(?:\s*-\s*(\d+))?/g)];
+    if (numeri.length < 2) continue;
+    const p = Number(numeri[0][1]);
+    for (const m of numeri.slice(1)) {
+      const da = Number(m[1]), a = m[2] ? Number(m[2]) : da;
+      for (let i = da; i <= a && i - da < 60; i++) {
+        if (!out.some(v => v.p === p && v.es === i)) out.push({ p, es: i });
+      }
     }
   }
   return out;

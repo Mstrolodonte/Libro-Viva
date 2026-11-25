@@ -118,8 +118,7 @@ export async function disegnaHomeLibro() {
       () => emit('vai-pagina', { pdf: ultima?.pdf || libroToPdf(LIBRO.primaPaginaLibro), scrollTop: ultima?.scrollTop }), 'evidenzia'));
   }
   sezioni.append(
-    tessera('esercizi', 'Esercizi', 'Cerca per pagina e numero', () => emit('mostra-vista', 'esercizi')),
-    tessera('compiti', 'Compiti', 'Le liste dei compiti', () => emit('mostra-vista', 'compiti')),
+    tessera('esercizi', 'Esercizi e compiti', 'Tutti insieme, PDF con i quadretti', () => emit('mostra-vista', 'esercizi')),
     tessera('progressi', 'Progressi', 'Esercizi fatti', () => emit('mostra-vista', 'progressi')),
     tessera('altro', 'Impostazioni libro', 'Capitoli, pagine, file', () => apriImpostazioniLibro()));
 

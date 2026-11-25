@@ -1,6 +1,6 @@
 // =====================================================================
 //  viste.js — Le sezioni dell'app:
-//   Esercizi (ricerca), Compiti del giorno, Progressi,
+//   Esercizi e compiti (una sezione sola), Progressi,
 //   pannello Capitoli + Segnalibri, Ricerca nel testo del libro.
 // =====================================================================
 import { $, el, toast, apriScheda, conferma, scaricaFile, eIOS } from './ui.js';
@@ -8,33 +8,98 @@ import { creaPdfCompiti } from './pdfcompiti.js';
 import { db, ldb } from './db.js';
 import { stato, on, emit } from './stato.js';
 import { UNITA, LIBRO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
-import { apriEsercizio, leggiRichiesta, chiave, tuttiGliEsercizi, caricaIndici, unitaDiPagina } from './esercizi.js';
+import { apriEsercizio, leggiRichiesta, chiave, tuttiGliEsercizi, caricaIndici, unitaDiPagina, cercaEsercizio, contenutoEsercizio } from './esercizi.js';
 import { testoPagina } from './pdf.js';
 
 // ---------------------------------------------------------------------
-//  ESERCIZI: scrivo pagina + numeri e apro la scheda
+//  ESERCIZI E COMPITI (una sola sezione)
+//  Scrivo "p. 546 es. 12, 15; p. 547 es. 3" e vedo TUTTI gli esercizi
+//  uno sotto l'altro. Posso salvarli nei compiti o farne un PDF.
 // ---------------------------------------------------------------------
 export function initEsercizi() {
-  const form = $('#form-esercizi');
-  form.addEventListener('submit', async e => {
+  const leggi = () => {
+    const testo = $('#es-testo').value.trim();
+    const voci = leggiRichiesta(testo);
+    if (!voci.length) toast('Scrivi per esempio: p. 546 es. 12, 15, 20');
+    return { testo, voci };
+  };
+  $('#form-esercizi').addEventListener('submit', async e => {
     e.preventDefault();
-    const p = Number($('#es-pagina').value);
-    const testo = $('#es-numeri').value;
-    if (!p || !testo.trim()) { toast('Scrivi la pagina del libro e il numero'); return; }
-    const voci = leggiRichiesta(`p. ${p} es. ${testo}`);
-    if (!voci.length) { toast('Numero non valido'); return; }
+    const { testo, voci } = leggi();
+    if (!voci.length) return;
+    $('#es-testo').blur();
     await aggiungiRecenti(voci);
-    if (voci.length === 1) apriEsercizio(voci[0].p, voci[0].es);
-    else mostraElenco($('#es-risultati'), voci);
+    mostraTutti(voci, testo);
     disegnaRecenti();
   });
-  on('stato-esercizi', () => { disegnaRecenti(); disegnaFiltri(); });
-  on('libro-cambiato', () => { $('#es-risultati').replaceChildren(); disegnaRecenti(); disegnaFiltri(); });
+  // Invio = mostra (Maiusc+Invio va a capo)
+  $('#es-testo').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#form-esercizi').requestSubmit(); }
+  });
+  $('#btn-es-pdf').onclick = () => {
+    const { testo, voci } = leggi();
+    if (voci.length) apriPdfCompiti(voci, testo, $('#es-data').value || null);
+  };
+  $('#btn-es-salva').onclick = async () => {
+    const { testo, voci } = leggi();
+    if (!voci.length) return;
+    const id = `c${Date.now()}`;
+    const per = $('#es-data').value || null;
+    await ldb.set('compiti', id, { id, testo, per, creato: Date.now(), voci });
+    disegnaCompiti();
+    toast(`Salvato nei compiti: ${voci.length} esercizi`);
+  };
+  on('stato-esercizi', () => { disegnaRecenti(); disegnaFiltri(); disegnaCompiti(); });
+  on('libro-cambiato', () => { $('#es-risultati').replaceChildren(); disegnaRecenti(); disegnaFiltri(); disegnaCompiti(); });
   disegnaRecenti();
   disegnaFiltri();
+  disegnaCompiti();
+}
+export function initCompiti() { /* ora è dentro initEsercizi */ }
+
+/**
+ * Mostra tutti gli esercizi richiesti, uno sotto l'altro, ognuno con
+ * il suo ritaglio, Fatto/Difficile/Preferito e "Mostra soluzione".
+ */
+let numeroElenco = 0;
+async function mostraTutti(voci, testo) {
+  const mio = ++numeroElenco;
+  const box = $('#es-risultati');
+  if (!stato.libro) { box.replaceChildren(el('p', { class: 'avviso' }, 'Prima importa il PDF del libro.')); return; }
+  const contatore = el('span', { class: 'nota' }, `${voci.length} esercizi`);
+  const testa = el('div', { class: 'elenco-testa' },
+    el('div', {}, el('h2', {}, testo || 'Esercizi'), contatore),
+    el('div', { class: 'riga-bottoni sinistra' },
+      el('button', { class: 'btn piccolo', onclick: () => apriPdfCompiti(voci, testo, $('#es-data').value || null) }, '📄 PDF'),
+      el('button', { class: 'btn piccolo', onclick: () => box.replaceChildren() }, '✕ Chiudi')));
+  const lista = el('div', { class: 'elenco-esercizi' });
+  box.replaceChildren(testa, lista);
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  const larg = Math.min(860, box.clientWidth - 34);
+  const nonTrovati = [];
+  // le schede compaiono subito; i ritagli si caricano uno alla volta (iPad: poca memoria)
+  for (const v of voci) {
+    if (mio !== numeroElenco) return;
+    const card = el('section', { class: 'card esercizio-card' },
+      el('h3', {}, `p. ${v.p} · es. ${v.es}`), el('div', { class: 'carica' }, 'Cerco…'));
+    lista.append(card);
+    const ris = await cercaEsercizio(v.p, v.es);
+    if (mio !== numeroElenco) return;
+    if (!ris) {
+      nonTrovati.push(v);
+      card.lastChild.replaceWith(el('p', { class: 'avviso' }, `Non l'ho trovato vicino a pagina ${v.p}. Controlla il numero.`));
+      continue;
+    }
+    card.firstChild.textContent = `p. ${ris.voce.p} · es. ${v.es}`;
+    const contenuto = await contenutoEsercizio(ris, { larghezza: larg });
+    card.lastChild.replaceWith(contenuto);
+    await contenuto.pronto;
+  }
+  contatore.textContent = `${voci.length - nonTrovati.length} esercizi` + (nonTrovati.length ? ` · ${nonTrovati.length} non trovati` : '');
 }
 
-/** Elenco di esercizi come "tessere" cliccabili */
+/** Elenco di esercizi come "tessere" cliccabili (recenti, difficili, preferiti) */
 export async function mostraElenco(contenitore, voci) {
   const tessere = [];
   for (const v of voci) {
@@ -66,33 +131,6 @@ async function disegnaFiltri() {
   $('#es-preferiti-box').hidden = !pref.length;
   mostraElenco($('#es-difficili'), diff);
   mostraElenco($('#es-preferiti'), pref);
-}
-
-// ---------------------------------------------------------------------
-//  COMPITI DEL GIORNO
-// ---------------------------------------------------------------------
-export function initCompiti() {
-  $('#form-compiti').addEventListener('submit', async e => {
-    e.preventDefault();
-    const testo = $('#compiti-testo').value.trim();
-    const voci = leggiRichiesta(testo);
-    if (!voci.length) { toast('Scrivi per esempio: p. 546 es. 12, 15, 20'); return; }
-    const id = `c${Date.now()}`;
-    const per = $('#compiti-data').value || null;
-    await ldb.set('compiti', id, { id, testo, per, creato: Date.now(), voci });
-    $('#compiti-testo').value = '';
-    disegnaCompiti();
-    toast(`Lista creata: ${voci.length} esercizi`);
-  });
-  $('#btn-compiti-pdf').onclick = () => {
-    const testo = $('#compiti-testo').value.trim();
-    const voci = leggiRichiesta(testo);
-    if (!voci.length) { toast('Scrivi per esempio: p. 546 es. 12, 15, 20'); return; }
-    apriPdfCompiti(voci, testo, $('#compiti-data').value || null);
-  };
-  on('stato-esercizi', disegnaCompiti);
-  on('libro-cambiato', disegnaCompiti);
-  disegnaCompiti();
 }
 
 /**
@@ -139,29 +177,28 @@ export function apriPdfCompiti(voci, testo, per = null) {
   };
 }
 
+/** Le liste dei compiti salvate */
 async function disegnaCompiti() {
   const liste = (await ldb.all('compiti')).map(([, v]) => v).sort((a, b) => b.creato - a.creato);
   const box = $('#compiti-liste');
-  if (!liste.length) { box.replaceChildren(el('p', { class: 'vuoto' }, 'Nessuna lista. Scrivi i compiti qui sopra.')); return; }
+  if (!liste.length) { box.replaceChildren(el('p', { class: 'vuoto' }, 'Nessun compito salvato. Scrivi gli esercizi qui sopra e premi "Salva nei compiti".')); return; }
   const blocchi = [];
   for (const l of liste) {
     let fatti = 0;
     for (const v of l.voci) if ((await ldb.get('stato', chiave(v.p, v.es)))?.fatto) fatti++;
-    const griglia = el('div', { class: 'griglia-tessere' });
-    mostraElenco(griglia, l.voci);
     const data = l.per ? new Date(l.per + 'T12:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }) : null;
     blocchi.push(el('section', { class: 'card' },
       el('div', { class: 'card-testa' },
         el('div', {}, el('h3', {}, l.testo), el('p', { class: 'nota' }, `${data ? 'Per ' + data : 'Senza data'} · ${fatti}/${l.voci.length} fatti`)),
-        el('div', { class: 'riga-bottoni sinistra', style: { margin: 0, flexWrap: 'nowrap' } },
-        el('button', { class: 'btn piccolo', onclick: () => apriPdfCompiti(l.voci, l.testo, l.per) }, '📄 PDF'),
         el('button', { class: 'btn-icona', 'aria-label': 'Elimina lista', onclick: async () => {
           if (await conferma('Eliminare questa lista di compiti? (gli esercizi restano segnati come fatti)', { si: 'Elimina', pericolo: true })) {
             await ldb.del('compiti', l.id); disegnaCompiti();
           }
-        } }, '🗑'))),
+        } }, '🗑')),
       el('div', { class: 'barra-progresso' }, el('div', { style: { width: `${100 * fatti / l.voci.length}%` } })),
-      griglia));
+      el('div', { class: 'riga-bottoni sinistra' },
+        el('button', { class: 'btn primario', onclick: () => { $('#es-testo').value = l.testo; mostraTutti(l.voci, l.testo); } }, '👀 Vedi tutti'),
+        el('button', { class: 'btn', onclick: () => apriPdfCompiti(l.voci, l.testo, l.per) }, '📄 PDF'))));
   }
   box.replaceChildren(...blocchi);
 }

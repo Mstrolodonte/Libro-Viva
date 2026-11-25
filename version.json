@@ -1,7 +1,7 @@
 {
- "versione": "1.5.0",
+ "versione": "1.6.0",
  "data": "2026-11-25",
- "novita": "PDF dei compiti: ritagli, quadretti, risposte in fondo",
+ "novita": "Esercizi e compiti in una sezione, tutti gli esercizi insieme, lettura dei compiti corretta",
  "file": [
   "index.html",
   "manifest.webmanifest",
