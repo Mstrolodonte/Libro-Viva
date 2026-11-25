@@ -1,7 +1,7 @@
 {
- "versione": "1.1.0",
+ "versione": "1.2.0",
  "data": "2026-11-25",
- "novita": "Libreria con più libri, importazione file più sicura su iPad",
+ "novita": "Libri con segnalibri: unità, esercizi e autoverifica letti dal sommario del PDF",
  "file": [
   "index.html",
   "manifest.webmanifest",

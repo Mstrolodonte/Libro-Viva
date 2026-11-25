@@ -270,20 +270,38 @@ export async function capitoliDaIndicePdf(doc, offset) {
   let outline;
   try { outline = await doc.getOutline(); } catch (e) { return []; }
   if (!outline || !outline.length) return [];
+  let etichette = null;
+  try { etichette = await doc.getPageLabels(); } catch (e) { /* */ }
   let voci = outline;
   if (voci.length === 1 && voci[0].items?.length) voci = voci[0].items;   // un solo titolo "contenitore"
-  const out = [];
-  for (const v of voci) {
+
+  // Pagina stampata di una voce del sommario (null se non ha pagina)
+  const paginaDi = async v => {
     try {
       let dest = v.dest;
       if (typeof dest === 'string') dest = await doc.getDestination(dest);
-      if (!dest) continue;
+      if (!dest) return null;
       const idx = typeof dest[0] === 'number' ? dest[0] : await doc.getPageIndex(dest[0]);
-      out.push({ titolo: v.title.trim(), inizio: idx + 1 - offset });
-    } catch (e) { /* voce senza pagina */ }
+      const et = etichette?.[idx];
+      return et && /^\d+$/.test(et) ? Number(et) : idx + 1 - offset;   // l'etichetta del PDF vince
+    } catch (e) { return null; }
+  };
+
+  const out = [];
+  for (const v of voci) {
+    const inizio = await paginaDi(v);
+    if (inizio == null) continue;
+    const c = { titolo: v.title.trim(), inizio, esercizi: null, autoverifica: null };
+    // Sotto-voci "Esercizi" e "Prova di autoverifica" (come nel libro di matematica)
+    for (const f of v.items || []) {
+      const t = f.title.trim().toLowerCase();
+      if (c.esercizi == null && /^esercizi\b|^exercises\b/.test(t)) c.esercizi = await paginaDi(f);
+      else if (c.autoverifica == null && /autoverifica|verifica finale|self.?test/.test(t)) c.autoverifica = await paginaDi(f);
+    }
+    out.push(c);
   }
   out.sort((a, b) => a.inizio - b.inizio);
-  return out.filter((c, i) => i === 0 || c.inizio !== out[i - 1].inizio).map((c, i) => ({ n: i + 1, ...c, esercizi: null, autoverifica: null }));
+  return out.filter((c, i) => i === 0 || c.inizio !== out[i - 1].inizio).map((c, i) => ({ n: i + 1, ...c }));
 }
 
 /** Capitoli leggendo le intestazioni in cima alle pagine ("Unità 3", "Capitolo 3", "Unit 3"…) */
