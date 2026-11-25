@@ -9,7 +9,7 @@
 // =====================================================================
 import { $, el, toast, apriScheda, conferma, scegliFile, icona } from './ui.js';
 import { db } from './db.js';
-import { stato, on, emit, elencoLibri, salvaLibroDef, eliminaLibro, apriLibro, ultimaLettura, leggiUltimaPagina, salvaPdf } from './stato.js';
+import { stato, on, emit, elencoLibri, salvaLibroDef, eliminaLibro, apriLibro, leggiUltimaPagina, salvaPdf } from './stato.js';
 import { LIBRO, UNITA, LIBRO_VUOTO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
 import { testoPagina } from './pdf.js';
 
@@ -49,16 +49,8 @@ export async function creaCopertina() {
 // ---------------------------------------------------------------------
 export async function disegnaLibreria() {
   const libri = (await elencoLibri()).filter(l => !l.nascosto);
-  const ultima = ultimaLettura();
   const box = $('#libreria-contenuto');
   const pezzi = [];
-
-  const libroUltimo = ultima && libri.find(l => l.id === ultima.libro);
-  if (libroUltimo) {
-    pezzi.push(el('button', { class: 'riprendi', onclick: () => entraNelLibro(libroUltimo.id, { leggi: true }) },
-      el('span', { class: 'riprendi-icona' }, icona('play')),
-      el('span', {}, el('small', {}, 'Riprendi da dove eri'), el('b', {}, `${libroUltimo.materia || libroUltimo.titolo} · ${etichettaPer(libroUltimo, ultima.pdf)}`))));
-  }
 
   const griglia = el('div', { class: 'griglia-libri' });
   for (const l of libri) {
@@ -84,12 +76,6 @@ export async function disegnaLibreria() {
       el('button', { class: 'btn piccolo', onclick: async () => { await salvaLibroDef({ ...l, nascosto: false }); disegnaLibreria(); } }, `Mostra ${l.materia || l.titolo}`))));
   }
   box.replaceChildren(...pezzi);
-}
-
-/** Etichetta pagina per un libro che non è quello aperto */
-function etichettaPer(def, pdf) {
-  const p = pdf - (def.offset || 0);
-  return p >= (def.primaPaginaLibro || 1) ? `p. ${p}` : `PDF ${pdf}`;
 }
 
 /** Apre un libro e mostra le sue sezioni (o la pagina, con leggi:true) */

@@ -1,7 +1,7 @@
 {
- "versione": "1.4.0",
+ "versione": "1.4.1",
  "data": "2026-11-25",
- "novita": "Importa le soluzioni da un unico file zip",
+ "novita": "Tolto il riquadro Riprendi dalla libreria",
  "file": [
   "index.html",
   "manifest.webmanifest",
