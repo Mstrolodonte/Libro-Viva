@@ -164,9 +164,12 @@ export async function ridisegna() {
   altezza *= zoom;
 
   // disegno su tele nuove, poi le scambio: niente pagina bianca mentre carica
+  const nuovi = [];
+  const liberaNuovi = () => nuovi.forEach(c => { c.width = 0; c.height = 0; });
   const lavori = usati.map((n, i) => {
     const lato = lati[i];
     const nuovo = document.createElement('canvas');
+    nuovi.push(nuovo);
     nuovo.className = 'canvas-pdf';
     const larghezza = altezza * basi[i].width / basi[i].height;
     return disegnaPagina(stato.libro, n, nuovo, larghezza, lato.task).then(r => { lato.task = r.task; return r.task.promise.then(() => ({ r, nuovo, n })); });
@@ -176,13 +179,17 @@ export async function ridisegna() {
     fatti = await Promise.all(lavori);
   } catch (e) {
     if (e?.name !== 'RenderingCancelledException') console.error(e);
+    liberaNuovi();
     return false;
   }
-  if (mio !== numeroRender) return false;
+  if (mio !== numeroRender) { liberaNuovi(); return false; }
 
   fatti.forEach(({ r, nuovo, n }, i) => {
     const lato = lati[i];
-    lato.canvas.replaceWith(nuovo);
+    const vecchio = lato.canvas;
+    vecchio.replaceWith(nuovo);
+    // libero subito la memoria della tela vecchia (Safari su iPad ne ha poca)
+    if (vecchio.tagName === 'CANVAS') { vecchio.width = 0; vecchio.height = 0; }
     lato.canvas = nuovo;
     lato.pdf = n;
     lato.wrap.hidden = false;

@@ -1,7 +1,7 @@
 {
- "versione": "1.7.5",
+ "versione": "1.7.6",
  "data": "2026-11-27",
- "novita": "Due dita non disegnano; evidenziatore sempre dello stesso colore anche se ci passi sopra più volte",
+ "novita": "Corretto: con l'evidenziatore alcune parti del libro sparivano (memoria dell'iPad)",
  "file": [
   "index.html",
   "manifest.webmanifest",

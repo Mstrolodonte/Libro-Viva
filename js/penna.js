@@ -218,13 +218,14 @@ function disegnaTratto(f, t, ctx = f.ctx) {
  * stesso punto il colore resta uguale (non diventa più scuro).
  * La penna sta sempre sopra l'evidenziatore.
  */
+let livello = null;   // tela di appoggio per l'evidenziatore (una sola per tutte le pagine)
 function ridisegnaTutto(f, inCorso = null) {
   const tutti = inCorso ? [...f.tratti, inCorso] : f.tratti;
   const { ctx, canvas } = f;
   ctx.clearRect(0, 0, f.W, f.H);
   const evid = tutti.filter(t => t.t === 'evid');
   if (evid.length) {
-    const liv = (f.livello ||= document.createElement('canvas'));
+    const liv = (livello ||= document.createElement('canvas'));
     if (liv.width !== canvas.width || liv.height !== canvas.height) { liv.width = canvas.width; liv.height = canvas.height; }
     const lc = liv.getContext('2d');
     lc.setTransform(1, 0, 0, 1, 0, 0);
@@ -237,6 +238,9 @@ function ridisegnaTutto(f, inCorso = null) {
     ctx.globalCompositeOperation = 'multiply';
     ctx.drawImage(liv, 0, 0);
     ctx.restore();
+    // libero subito la memoria (sull'iPad le tele sono poche: senza, il libro
+    // può restare disegnato a metà). La tengo solo mentre stai evidenziando.
+    if (!inCorso) { liv.width = 0; liv.height = 0; }
   }
   for (const t of tutti) if (t.t !== 'evid' && !t.gomma) disegnaTratto(f, t);
 }
