@@ -110,6 +110,17 @@ export const ldb = {
     return chiavi.map((k, i) => [togli(k), valori[i]]);
   },
   setMany: (store, coppie) => db.setMany(store, coppie.map(([k, v]) => [pk(k), v])),
+  /** Cancella progressi (esercizi fatti) e appunti (disegni, compiti, segnalibri) dei libri indicati */
+  cancellaProgressi: async (ids) => {
+    const vecchio = idLibro;
+    try {
+      for (const id of ids) {
+        idLibro = id;
+        for (const s of ['tratti', 'stato', 'compiti']) for (const k of await conIntervallo(s, 'getAllKeys')) await db.del(s, k);
+        for (const k of ['segnalibri', 'recenti', 'ultimaPagina']) await db.del('kv', pk(k));
+      }
+    } finally { idLibro = vecchio; }
+  },
   /** Cancella tutti i dati di un libro (quando lo togli dalla libreria) */
   svuotaLibro: async (id) => {
     const vecchio = idLibro;
@@ -124,7 +135,7 @@ export const ldb = {
  * Migrazione dalla versione 1.0 (un solo libro): sposta i vecchi dati
  * sotto il libro di matematica ("mat:"). Si fa una volta sola.
  */
-const CHIAVI_GLOBALI = new Set(['adminHash', 'libri', 'versioneDati', 'ultimoLibro']);
+const CHIAVI_GLOBALI = new Set(['adminHash', 'libri', 'versioneDati', 'ultimoLibro', 'classi']);
 export async function migraDati() {
   if ((await db.get('kv', 'versioneDati')) >= 2) return;
   for (const s of STORES) {

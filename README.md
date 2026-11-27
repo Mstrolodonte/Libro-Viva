@@ -9,24 +9,25 @@ Funziona **offline**: il libro e le soluzioni restano sull'iPad.
 
 | Funzione | Dove |
 |---|---|
-| Libreria: scegli il libro, "Riprendi da dove eri" | 📚 all'avvio |
+| Libreria: scegli il libro | 📚 all'avvio |
+| **Classi** (cartelle di libri, es. 1IC): la prima volta scegli la tua classe e vedi solo i suoi libri | 📚 → 📁 Cambia |
 | Aggiungi libro: capitoli e numeri di pagina trovati da soli | 📚 → ➕ |
-| Sezioni del libro: leggi, capitoli, esercizi, compiti, progressi | 🏠 Sezioni |
+| Sezioni del libro: leggi, capitoli, esercizi e compiti | 🏠 Sezioni |
 | Legge il libro, pagine **stampate** (non del PDF) | 📖 Libro |
 | Capitoli automatici (mappa pagine, PDF = libro + 18) | ☰ in alto |
 | Pagina adattata allo schermo, **due pagine affiancate** (automatico in orizzontale) | in alto |
 | Zoom con due dita **dove hai le dita**, doppio tocco, Ctrl+rotella sul computer | sulla pagina |
-| Penna Apple Pencil, evidenziatore, gomma, annulla (anche sulla pagina destra) | ✏️ in alto |
+| Penna Apple Pencil, evidenziatore, gomma, annulla: barra galleggiante tipo Notability | ✏️ in alto |
 | Riapre l'ultima pagina, anche dopo un crash | automatico |
 | Cerca un esercizio (pagina + numero, ±5 pagine e oltre) | 📝 Esercizi |
 | Scheda esercizio + **Mostra soluzione esercizio** (a passi) | tocca un esercizio |
-| Esercizi e compiti insieme: scrivi "p. 546 es. 12, 15, 20-22" e li vedi tutti uno sotto l'altro | 📝 Esercizi |
+| Esercizi e compiti insieme: scrivi "p. 546 es. 12, 15 p. 547 es. 3" (anche senza ";") e li vedi tutti uno sotto l'altro | 📝 Esercizi |
 | **PDF dei compiti**: ritagli ad alta risoluzione, quadretti, fino a 3 per pagina, risposte (e svolgimenti) in fondo | 📝 Esercizi → 📄 |
-| Fatto ✅ / Difficile ⚠️ / Preferito ⭐ e progressi per unità | 📊 Progressi |
+| Fatto ✅ / Difficile ⚠️ / Preferito ⭐; progressi per unità nel pannello Capitoli | ☰ in alto |
 | Segnalibri, ricerca nel testo, tema scuro, zoom | in alto |
 | Importa uno **zip** con tutte le soluzioni JSON (es. Soluzioni_Matematica_Vol2.zip) | Importa |
-| Backup di disegni e progressi | ⚙️ Altro |
-| Area admin con password: carica soluzioni per unità | ⚙️ Altro → Admin |
+| Backup di disegni e progressi; cancella progressi e appunti (con doppia conferma) | ⚙️ Altro |
+| Area admin con password: classi, soluzioni per unità | ⚙️ Altro → Admin |
 
 L'app **non si aggiorna da sola**: solo con *Altro → Controlla aggiornamento app*.
 
@@ -63,7 +64,8 @@ js/
   lettore.js        visualizzatore pagine, zoom, scorrimento
   penna.js          Apple Pencil
   esercizi.js       ricerca esercizi + scheda + soluzione
-  viste.js          Esercizi, Compiti, Progressi, Capitoli, Segnalibri, Ricerca testo
+  viste.js          Esercizi e compiti, Capitoli con progressi, Segnalibri, Ricerca testo
+  classi.js         classi (cartelle di libri): admin + scelta della classe
   importa.js        importazione dal disco (anche .zip) / download dal server di casa
   pdfcompiti.js     crea il PDF dei compiti (scrittore PDF senza librerie)
   zip.js            apre i file .zip nel browser (DecompressionStream)

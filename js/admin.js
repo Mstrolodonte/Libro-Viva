@@ -15,6 +15,7 @@ import { UNITA, impostaUnita, LIBRO, pdfToLibro } from './config.js';
 import { importaFile, mostraRiepilogo, salvaSoluzioniJson } from './importa.js';
 import { caricaIndici, testoConFormule } from './esercizi.js';
 import { testoPagina } from './pdf.js';
+import { cardClassiAdmin } from './classi.js';
 
 async function hash(testo) {
   const dati = new TextEncoder().encode('libro-vivo:' + testo);
@@ -52,6 +53,9 @@ export async function apriAdmin() {
 async function mostra() {
   const s = apriScheda('🔑 Area admin', { larga: true });
   const c = s.corpo;
+
+  // --- Classi (cartelle dei libri) ---
+  c.append(await cardClassiAdmin());
 
   // --- Soluzioni per unità ---
   const kv = new Map(await ldb.all('kv'));

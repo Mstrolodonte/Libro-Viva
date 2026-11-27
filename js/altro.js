@@ -4,7 +4,8 @@
 // =====================================================================
 import { $, el, toast, apriScheda, conferma, scegliFile, mb } from './ui.js';
 import { db, ldb, spazioUsato, chiediSpazioPersistente } from './db.js';
-import { stato, on, elencoFile, eliminaPdf, impostazioni, salvaImpostazione } from './stato.js';
+import { stato, on, elencoFile, eliminaPdf, impostazioni, salvaImpostazione, elencoLibri } from './stato.js';
+import { classeScelta, apriSceltaClasse, elencoClassi } from './classi.js';
 import { UNITA, LIBRO } from './config.js';
 import { apriImpostazioniLibro } from './libreria.js';
 import { importaFile, mostraRiepilogo, controllaAggiornamenti, scaricaDalServer } from './importa.js';
@@ -14,6 +15,7 @@ import { apriAdmin } from './admin.js';
 export function initAltro() {
   on('vista-mostrata', v => { if (v === 'altro') disegna(); });
   on('file-cambiati', () => { if ($('#vista-altro').classList.contains('attiva')) disegna(); });
+  on('classi-cambiate', () => { if ($('#vista-altro').classList.contains('attiva')) disegna(); });
 }
 
 /** Bottone "Importa dal disco" riusabile (anche nella schermata di benvenuto) */
@@ -155,13 +157,40 @@ async function disegna(box = $('#altro-contenuto'), { soloApp = false } = {}) {
     el('p', { class: 'nota' }, persistente ? '🔒 Dati protetti: l\'iPad non li cancella da solo.' : '⚠️ Aggiungi l\'app alla schermata Home per proteggere i dati.'),
     persistente ? '' : el('button', { class: 'btn', onclick: async () => { const ok = await chiediSpazioPersistente(); toast(ok ? 'Dati protetti' : 'Prima aggiungi l\'app alla Home'); disegna(); } }, 'Proteggi i dati'));
 
+  // --- Classe ---
+  const classi = await elencoClassi();
+  const miaClasse = await classeScelta();
+  const cardClasse = classi.length ? el('section', { class: 'card' },
+    el('h3', {}, '📁 La mia classe'),
+    el('p', {}, miaClasse ? `Classe scelta: ${miaClasse.nome}` : 'Nessuna classe: vedi tutti i libri.'),
+    el('button', { class: 'btn', onclick: async () => { await apriSceltaClasse(); } }, 'Cambia classe')) : '';
+
+  // --- Cancella progressi e appunti ---
+  const cardReset = el('section', { class: 'card zona-pericolo' },
+    el('h3', {}, '🗑 Cancella progressi e appunti'),
+    el('p', { class: 'nota' }, 'Toglie esercizi fatti, difficili, preferiti, disegni sulle pagine e segnalibri. Il libro e le soluzioni restano. Prima, se vuoi, fai un backup.'),
+    el('div', { class: 'riga-bottoni sinistra' },
+      stato.idLibro && !soloApp ? el('button', { class: 'btn pericolo', onclick: () => cancellaTutto(false) }, `Solo ${LIBRO.materia || 'questo libro'}`) : '',
+      el('button', { class: 'btn pericolo', onclick: () => cancellaTutto(true) }, 'Tutti i libri')));
+
   const cardAdmin = el('section', { class: 'card' },
     el('h3', {}, '🔑 Admin'),
     el('p', { class: 'nota' }, 'Carica le soluzioni corrette per ogni unità, gli indici e i capitoli. Serve la password.'),
     el('button', { class: 'btn', onclick: apriAdmin }, 'Entra nell\'area admin'));
 
-  if (soloApp) box.replaceChildren(cardAspetto, cardBackup, cardApp, cardAdmin);
-  else box.replaceChildren(cardLibro, ...(UNITA.length && (LIBRO.indiciApp || Object.keys(files).length > 1) ? [cardSol] : []), cardAspetto, cardBackup, cardServer, cardApp, cardAdmin);
+  if (soloApp) box.replaceChildren(cardClasse, cardAspetto, cardBackup, cardApp, cardReset, cardAdmin);
+  else box.replaceChildren(cardLibro, ...(UNITA.length && (LIBRO.indiciApp || Object.keys(files).length > 1) ? [cardSol] : []), cardClasse, cardAspetto, cardBackup, cardServer, cardApp, cardReset, cardAdmin);
+}
+
+/** Cancella progressi e appunti, dopo due conferme */
+async function cancellaTutto(tutti) {
+  const cosa = tutti ? 'di TUTTI i libri' : `del libro ${LIBRO.materia || LIBRO.titolo}`;
+  if (!await conferma(`⚠️ Stai per cancellare tutto: esercizi fatti, difficili, preferiti, disegni, appunti e segnalibri ${cosa}. Non si può tornare indietro.`, { si: 'Sì, cancella tutto', pericolo: true })) return;
+  if (!await conferma('Sei proprio sicuro? Dopo non si recupera niente (solo da un backup).', { si: 'Cancella', pericolo: true })) return;
+  const ids = tutti ? (await elencoLibri()).map(l => l.id) : [stato.idLibro];
+  await ldb.cancellaProgressi(ids);
+  toast('Cancellato. Riapro l\'app…');
+  setTimeout(() => location.reload(), 800);
 }
 
 /** Impostazioni generali dell'app (dalla libreria) */

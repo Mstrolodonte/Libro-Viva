@@ -13,8 +13,8 @@ import { testoPagina } from './pdf.js';
 
 // ---------------------------------------------------------------------
 //  ESERCIZI E COMPITI (una sola sezione)
-//  Scrivo "p. 546 es. 12, 15; p. 547 es. 3" e vedo TUTTI gli esercizi
-//  uno sotto l'altro. Posso salvarli nei compiti o farne un PDF.
+//  Scrivo "p. 546 es. 12, 15 p. 547 es. 3" e vedo TUTTI gli esercizi
+//  uno sotto l'altro. Posso farne un PDF con i quadretti.
 // ---------------------------------------------------------------------
 export function initEsercizi() {
   const leggi = () => {
@@ -28,9 +28,7 @@ export function initEsercizi() {
     const { testo, voci } = leggi();
     if (!voci.length) return;
     $('#es-testo').blur();
-    await aggiungiRecenti(voci);
     mostraTutti(voci, testo);
-    disegnaRecenti();
   });
   // Invio = mostra (Maiusc+Invio va a capo)
   $('#es-testo').addEventListener('keydown', e => {
@@ -38,22 +36,11 @@ export function initEsercizi() {
   });
   $('#btn-es-pdf').onclick = () => {
     const { testo, voci } = leggi();
-    if (voci.length) apriPdfCompiti(voci, testo, $('#es-data').value || null);
+    if (voci.length) apriPdfCompiti(voci, testo);
   };
-  $('#btn-es-salva').onclick = async () => {
-    const { testo, voci } = leggi();
-    if (!voci.length) return;
-    const id = `c${Date.now()}`;
-    const per = $('#es-data').value || null;
-    await ldb.set('compiti', id, { id, testo, per, creato: Date.now(), voci });
-    disegnaCompiti();
-    toast(`Salvato nei compiti: ${voci.length} esercizi`);
-  };
-  on('stato-esercizi', () => { disegnaRecenti(); disegnaFiltri(); disegnaCompiti(); });
-  on('libro-cambiato', () => { $('#es-risultati').replaceChildren(); disegnaRecenti(); disegnaFiltri(); disegnaCompiti(); });
-  disegnaRecenti();
+  on('stato-esercizi', () => disegnaFiltri());
+  on('libro-cambiato', () => { $('#es-risultati').replaceChildren(); disegnaFiltri(); });
   disegnaFiltri();
-  disegnaCompiti();
 }
 export function initCompiti() { /* ora è dentro initEsercizi */ }
 
@@ -70,7 +57,7 @@ async function mostraTutti(voci, testo) {
   const testa = el('div', { class: 'elenco-testa' },
     el('div', {}, el('h2', {}, testo || 'Esercizi'), contatore),
     el('div', { class: 'riga-bottoni sinistra' },
-      el('button', { class: 'btn piccolo', onclick: () => apriPdfCompiti(voci, testo, $('#es-data').value || null) }, '📄 PDF'),
+      el('button', { class: 'btn piccolo', onclick: () => apriPdfCompiti(voci, testo) }, '📄 PDF'),
       el('button', { class: 'btn piccolo', onclick: () => box.replaceChildren() }, '✕ Chiudi')));
   const lista = el('div', { class: 'elenco-esercizi' });
   box.replaceChildren(testa, lista);
@@ -112,16 +99,6 @@ export async function mostraElenco(contenitore, voci) {
   contenitore.replaceChildren(...tessere);
 }
 
-async function aggiungiRecenti(voci) {
-  const r = (await ldb.get('kv', 'recenti')) || [];
-  const nuovi = [...voci, ...r.filter(x => !voci.some(v => v.p === x.p && v.es === x.es))].slice(0, 24);
-  await ldb.set('kv', 'recenti', nuovi);
-}
-async function disegnaRecenti() {
-  const r = (await ldb.get('kv', 'recenti')) || [];
-  $('#es-recenti-box').hidden = !r.length;
-  mostraElenco($('#es-recenti'), r);
-}
 async function disegnaFiltri() {
   const tutti = await ldb.all('stato');
   const voce = k => { const [p, es] = k.split('-').map(Number); return { p, es }; };
@@ -177,67 +154,37 @@ export function apriPdfCompiti(voci, testo, per = null) {
   };
 }
 
-/** Le liste dei compiti salvate */
-async function disegnaCompiti() {
-  const liste = (await ldb.all('compiti')).map(([, v]) => v).sort((a, b) => b.creato - a.creato);
-  const box = $('#compiti-liste');
-  if (!liste.length) { box.replaceChildren(el('p', { class: 'vuoto' }, 'Nessun compito salvato. Scrivi gli esercizi qui sopra e premi "Salva nei compiti".')); return; }
-  const blocchi = [];
-  for (const l of liste) {
-    let fatti = 0;
-    for (const v of l.voci) if ((await ldb.get('stato', chiave(v.p, v.es)))?.fatto) fatti++;
-    const data = l.per ? new Date(l.per + 'T12:00').toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' }) : null;
-    blocchi.push(el('section', { class: 'card' },
-      el('div', { class: 'card-testa' },
-        el('div', {}, el('h3', {}, l.testo), el('p', { class: 'nota' }, `${data ? 'Per ' + data : 'Senza data'} · ${fatti}/${l.voci.length} fatti`)),
-        el('button', { class: 'btn-icona', 'aria-label': 'Elimina lista', onclick: async () => {
-          if (await conferma('Eliminare questa lista di compiti? (gli esercizi restano segnati come fatti)', { si: 'Elimina', pericolo: true })) {
-            await ldb.del('compiti', l.id); disegnaCompiti();
-          }
-        } }, '🗑')),
-      el('div', { class: 'barra-progresso' }, el('div', { style: { width: `${100 * fatti / l.voci.length}%` } })),
-      el('div', { class: 'riga-bottoni sinistra' },
-        el('button', { class: 'btn primario', onclick: () => { $('#es-testo').value = l.testo; mostraTutti(l.voci, l.testo); } }, '👀 Vedi tutti'),
-        el('button', { class: 'btn', onclick: () => apriPdfCompiti(l.voci, l.testo, l.per) }, '📄 PDF'))));
-  }
-  box.replaceChildren(...blocchi);
-}
-
 // ---------------------------------------------------------------------
 //  PROGRESSI per unità
 // ---------------------------------------------------------------------
-export function initProgressi() {
-  on('stato-esercizi', disegnaProgressi);
-  on('vista-mostrata', v => { if (v === 'progressi') disegnaProgressi(); });
-}
+export function initProgressi() { /* i progressi ora sono nel pannello dei capitoli */ }
 
-async function disegnaProgressi() {
+/**
+ * Esercizi fatti per unità: Map n -> { tot, fatti, diff }
+ * (tot = esercizi dell'indice; per i libri senza indice resta 0)
+ */
+export async function progressiPerUnita() {
   await caricaIndici();
   const stati = new Map(await ldb.all('stato'));
   const perUnita = new Map();
   const conta = n => { if (!perUnita.has(n)) perUnita.set(n, { tot: 0, fatti: 0, diff: 0 }); return perUnita.get(n); };
-  const indicizzati = tuttiGliEsercizi();
-  for (const v of indicizzati) conta(v.u).tot++;
-  for (const [k, s] of stati) {
+  for (const v of tuttiGliEsercizi()) conta(v.u).tot++;
+  for (const [k, st] of stati) {
     const p = Number(k.split('-')[0]);
     const x = conta(unitaDiPagina(p)?.n ?? 0);
-    if (s.fatto) x.fatti++;
-    if (s.difficile) x.diff++;
+    if (st.fatto) x.fatti++;
+    if (st.difficile) x.diff++;
   }
-  let totFatti = 0, tot = 0;
-  const unita = UNITA.length ? UNITA : [{ n: 0, titolo: 'Tutto il libro', esercizi: LIBRO.primaPaginaLibro }];
-  const righe = unita.map(u => {
-    const x = perUnita.get(u.n) || { tot: 0, fatti: 0, diff: 0 };
-    totFatti += x.fatti; tot += x.tot;
-    const perc = x.tot ? Math.round(100 * x.fatti / x.tot) : 0;
-    return el('button', { class: 'riga-unita', onclick: () => emit('vai-pagina', { pdf: libroToPdf(u.esercizi || u.inizio) }) },
-      el('span', { class: 'u-num' }, u.n || '📘'),
-      el('span', { class: 'u-nome' }, u.titolo, el('small', {}, (x.tot ? `${x.fatti} fatti su ${x.tot}` : `${x.fatti} fatti`) + (x.diff ? ` · ${x.diff} difficili` : ''))),
-      el('span', { class: 'barra-progresso piccola' }, el('div', { style: { width: `${perc}%` } })),
-      el('span', { class: 'u-perc' }, x.tot ? `${perc}%` : ''));
-  });
-  $('#progressi-totale').textContent = tot ? `${totFatti} esercizi fatti su ${tot}` : `${totFatti} esercizi fatti`;
-  $('#progressi-unita').replaceChildren(...righe);
+  return perUnita;
+}
+
+/** Barretta "12/80 fatti" per una unità */
+export function barraProgresso(x) {
+  if (!x || (!x.tot && !x.fatti)) return '';
+  const perc = x.tot ? Math.round(100 * x.fatti / x.tot) : 0;
+  return el('span', { class: 'progresso-cap' },
+    el('span', { class: 'barra-progresso piccola' }, el('div', { style: { width: `${perc}%` } })),
+    el('small', {}, (x.tot ? `${x.fatti}/${x.tot} fatti` : `${x.fatti} fatti`) + (x.diff ? ` · ${x.diff} ⚠️` : '')));
 }
 
 // ---------------------------------------------------------------------
@@ -259,12 +206,20 @@ function vai(pdf) {
 
 async function disegnaCapitoli() {
   const att = stato.pagina;
+  const prog = await progressiPerUnita();
+  let fatti = 0, tot = 0;
+  for (const x of prog.values()) { fatti += x.fatti; tot += x.tot; }
+  $('#progressi-totale').replaceChildren(tot || fatti
+    ? el('div', { class: 'progresso-totale' },
+      el('b', {}, `${fatti} ${fatti === 1 ? 'esercizio fatto' : 'esercizi fatti'}` + (tot ? ` su ${tot}` : '')),
+      tot ? el('div', { class: 'barra-progresso' }, el('div', { style: { width: `${100 * fatti / tot}%` } })) : '')
+    : '');
   const lista = UNITA.map(u => {
     const fine = fineUnita(u);
     const qui = att >= libroToPdf(u.inizio) && att <= libroToPdf(fine);
     return el('li', { class: qui ? 'qui' : '' },
       el('button', { class: 'cap-titolo', onclick: () => vai(libroToPdf(u.inizio)) },
-        el('b', {}, `Unità ${u.n}`), ` ${u.titolo}`, el('small', {}, `pp. ${u.inizio}–${fine}`)),
+        el('b', {}, `Unità ${u.n}`), ` ${u.titolo}`, el('small', {}, `pp. ${u.inizio}–${fine}`), barraProgresso(prog.get(u.n))),
       el('div', { class: 'cap-link' },
         el('button', { onclick: () => vai(libroToPdf(u.inizio)) }, 'Teoria'),
         u.esercizi ? el('button', { onclick: () => vai(libroToPdf(u.esercizi)) }, `Esercizi p. ${u.esercizi}`) : '',

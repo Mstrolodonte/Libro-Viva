@@ -90,19 +90,67 @@ body:not([data-vista="libro"]) #barra-alta, body:not([data-vista="libro"]) #barr
 .btn-icona { transition: background .15s, color .15s, transform .1s; }
 .btn-icona.attivo { background: var(--primario-chiaro); color: var(--primario); }
 
+/* barra della penna: "isola" galleggiante come Notability / GoodNotes */
 #barra-penna {
-  position: fixed; top: calc(var(--alto) + env(safe-area-inset-top) + 8px); left: 50%; transform: translateX(-50%);
-  display: flex; align-items: center; gap: 2px; padding: 4px 8px; flex-wrap: wrap; justify-content: center;
-  background: var(--superficie); border: 1px solid var(--bordo); border-radius: 16px; box-shadow: var(--ombra);
-  z-index: 19; max-width: calc(100vw - 16px);
+  position: fixed; top: calc(var(--alto) + env(safe-area-inset-top) + 10px); left: 50%; transform: translateX(-50%);
+  display: flex; align-items: center; gap: 4px; padding: 0 10px; height: 58px; overflow: hidden;
+  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  -webkit-backdrop-filter: blur(18px) saturate(180%); backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid var(--bordo); border-radius: 22px; z-index: 19; max-width: calc(100vw - 16px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 30px rgba(20, 30, 50, .18);
+  animation: entra-barra .22s ease;
 }
-#barra-penna .sep { width: 1px; height: 26px; background: var(--bordo); margin: 0 4px; }
-.colori-penna { display: flex; gap: 4px; }
-.colore { width: 30px; height: 30px; border-radius: 50%; border: 3px solid var(--superficie); box-shadow: 0 0 0 1px var(--bordo); padding: 0; }
-.colore.attivo { box-shadow: 0 0 0 2px var(--primario); }
+@keyframes entra-barra { from { opacity: 0; transform: translate(-50%, -8px); } }
+#barra-penna .sep { width: 1px; height: 30px; background: var(--bordo); margin: 0 4px; flex: none; }
+.gruppo-penna { display: flex; align-items: center; gap: 2px; flex: none; }
+/* strumenti: penne "in piedi" che si alzano quando sono scelte */
+.strumenti-penna { align-self: flex-end; height: 100%; align-items: flex-end; gap: 0; }
+.btn-strumento {
+  position: relative; width: 40px; height: 52px; border: 0; background: none; padding: 0;
+  display: flex; align-items: flex-end; justify-content: center; color: var(--testo-2);
+  transform: translateY(12px); transition: transform .18s cubic-bezier(.3, 1.4, .6, 1), color .15s;
+}
+.btn-strumento.attivo { transform: translateY(2px); color: var(--testo); }
+.btn-strumento[data-strumento="mano"] { align-items: center; transform: none; height: 100%; }
+.btn-strumento[data-strumento="mano"] .ic { width: 24px; height: 24px; }
+.btn-strumento[data-strumento="mano"].attivo { color: var(--primario); }
+.ic-grande { width: 30px; height: 46px; fill: var(--superficie); stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; stroke-linecap: round; }
+.btn-strumento .punta { position: absolute; left: 50%; top: 6px; transform: translateX(-50%); pointer-events: none; }
+.btn-strumento[data-strumento="penna"] .punta { width: 6px; height: 9px; top: 7px; border-radius: 3px 3px 1px 1px; background: var(--colore-penna, #1a1a1a); }
+.btn-strumento[data-strumento="evid"] .punta { width: 8px; height: 5px; top: 7px; border-radius: 1px; background: var(--colore-evid, #ffe14d); }
+.btn-strumento[data-strumento="gomma"] .ic-grande { fill: color-mix(in srgb, #ff9bb0 35%, var(--superficie)); }
+/* colori: cerchi pieni, quello scelto ha l'anello */
+.colori-penna { display: flex; gap: 6px; align-items: center; }
+.colore {
+  --c: #000; position: relative; width: 26px; height: 26px; border-radius: 50%; border: 0; padding: 0; flex: none;
+  background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .12); transition: transform .12s;
+}
+.colore.attivo { box-shadow: 0 0 0 2px var(--superficie), 0 0 0 4px var(--c); }
+.colore:active { transform: scale(.9); }
+.colore.altro { background: conic-gradient(#f44, #fd4, #4d4, #4df, #44f, #d4f, #f44); cursor: pointer; overflow: hidden; }
+.colore.altro.scelto { background: var(--c); }
+.colore.altro input { position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer; }
+/* spessori */
+.spessori { gap: 0; }
+.spessore { width: 34px; height: 40px; border: 0; background: none; border-radius: 10px; display: grid; place-items: center; color: var(--testo-2); }
+.spessore.attivo { background: var(--superficie-2); color: var(--testo); }
 .spessore i { display: block; border-radius: 50%; background: currentColor; }
+#barra-penna.senza-colori #posto-colori, #barra-penna.senza-colori .spessori,
+#barra-penna.senza-colori #posto-colori + .sep, #barra-penna.senza-colori .spessori + .sep { display: none; }
+#barra-penna .btn-icona { min-width: 38px; height: 40px; }
+#btn-solo-pencil.attivo { background: var(--primario-chiaro); color: var(--primario); }
+.btn-fatto { border: 0; background: var(--primario); color: var(--primario-testo); font-weight: 600; border-radius: 12px; height: 36px; padding: 0 14px; margin-left: 4px; }
 .btn-testo { border: 1px solid var(--bordo); background: var(--superficie-2); border-radius: 10px; height: 36px; padding: 0 10px; font-size: .85rem; margin-left: 4px; }
 .btn-testo.attivo { background: var(--primario-chiaro); color: var(--primario); border-color: var(--primario); }
+@media (max-width: 760px) {
+  #barra-penna { padding: 0 6px; gap: 2px; }
+  .colori-penna { gap: 4px; }
+  .colore { width: 22px; height: 22px; }
+  .colori-penna .colore:nth-child(n+5):not(.altro) { display: none; }
+  .spessore { width: 28px; }
+  #barra-penna .btn-icona { min-width: 32px; }
+  #btn-svuota-pagina { display: none; }
+}
 
 #barra-schede {
   position: fixed; left: 0; right: 0; bottom: 0; height: calc(var(--basso) + env(safe-area-inset-bottom));
@@ -377,3 +425,26 @@ body[data-vista="libreria"] main { bottom: env(safe-area-inset-bottom); }
 .esercizio-card .ritaglio { margin: 6px 0 10px; }
 .esercizio-card .riga-bottoni { margin: 8px 0 0; }
 #compiti-box { margin-top: 26px; }
+
+/* progressi nel pannello capitoli */
+.progresso-totale { margin: 0 20px 10px; padding: 10px 12px; background: var(--superficie-2); border-radius: 12px; }
+.progresso-totale .barra-progresso { margin: 6px 0 0; }
+.progresso-cap { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+.progresso-cap small { display: inline; }
+.progresso-cap .barra-progresso.piccola { width: 90px; height: 6px; }
+
+/* classi (cartelle dei libri) */
+.chip-classe { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 14px; padding: 8px 14px; border: 1px solid var(--bordo); background: var(--superficie); border-radius: 999px; font-size: .95rem; color: var(--testo); }
+.chip-classe small { color: var(--primario); font-weight: 600; }
+.griglia-classi { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; margin: 12px 0; }
+.classe-card { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 18px 10px; border: 1px solid var(--bordo); border-radius: 16px; background: var(--superficie-2); color: var(--testo); }
+.classe-card b { font-size: 1.4rem; }
+.classe-card small { color: var(--testo-2); }
+.classe-card.attiva { border-color: var(--primario); background: var(--primario-chiaro); color: var(--primario); }
+.classe-admin { border-top: 1px solid var(--bordo); padding-top: 10px; margin-top: 10px; }
+.caselle-libri { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 4px 12px; }
+.interruttore.piccolo { font-size: .9rem; padding: 4px 0; }
+.zona-pericolo { border-color: color-mix(in srgb, var(--rosso) 40%, var(--bordo)); }
+.form-esercizi .riga-bottoni { margin-top: 10px; }
+.progresso-totale .barra-progresso { height: 8px; background: var(--bordo); border-radius: 4px; overflow: hidden; }
+.progresso-totale .barra-progresso > div { min-width: 4px; }

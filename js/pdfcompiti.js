@@ -247,7 +247,10 @@ const SIMBOLI = {
   infty: '∞', cup: '∪', cap: '∩', in: '∈', notin: '∉', emptyset: '∅', varnothing: '∅', forall: '∀', exists: '∃',
   nexists: '∄', Rightarrow: '⇒', rightarrow: '→', to: '→', Leftrightarrow: '⇔', iff: '⇔', implies: '⇒', vee: '∨',
   wedge: '∧', lor: '∨', land: '∧', pi: 'π', alpha: 'α', beta: 'β', gamma: 'γ', delta: 'δ', Delta: 'Δ', theta: 'θ',
-  lambda: 'λ', mu: 'μ', sigma: 'σ', varphi: 'φ', phi: 'φ', omega: 'ω', angle: '∠', widehat: '', hat: '',
+  lambda: 'λ', mu: 'μ', sigma: 'σ', varphi: 'φ', phi: 'φ', omega: 'ω', Omega: 'Ω', rho: 'ρ', tau: 'τ', psi: 'ψ',
+  epsilon: 'ε', varepsilon: 'ε', eta: 'η', ell: 'ℓ', angle: '∠', widehat: '', hat: '', equiv: '≡', propto: '∝',
+  leftrightarrow: '↔', frown: '⌒', sin: 'sin', cos: 'cos', tan: 'tan', det: 'det', max: 'max', min: 'min', log: 'log',
+  arcsin: 'arcsin', arccos: 'arccos', arctan: 'arctan', supseteq: '⊇', supset: '⊃', geqslant: '≥', leqslant: '≤',
   triangle: '△', cong: '≅', sim: '∼', parallel: '∥', perp: '⊥', approx: '≈', simeq: '≃', circ: '°', degree: '°',
   dots: '…', ldots: '…', cdots: '⋯', lvert: '|', rvert: '|', vert: '|', mid: '|', setminus: '∖', subset: '⊂',
   subseteq: '⊆', neg: '¬', quad: ' ', qquad: ' ', '%': '%', '{': '{', '}': '}', ',': ' ', ';': ' ', ':': ' ', '!': '', ' ': ' ',
@@ -262,6 +265,7 @@ const tonda = s => (/^[\w.,√π]+$/u.test(s) ? s : `(${s})`);
 const ARG = String.raw`(?:\{([^{}]*)\}|\s*([A-Za-z0-9]))`;
 const RE_FRAC = new RegExp(String.raw`\\[dt]?frac` + ARG + ARG, 'g');
 const RE_RADQ = new RegExp(String.raw`\\sqrt` + ARG, 'g');
+const RE_RADN = new RegExp(String.raw`\\sqrt\[([^\]]*)\]` + ARG, 'g');
 
 // i nomi più lunghi prima: così "\\cdotBH" diventa "·BH" e non "cdotBH"
 const RE_SIMBOLI = new RegExp(String.raw`\\(` + Object.keys(SIMBOLI).filter(k => /^[a-zA-Z]+$/.test(k))
@@ -270,24 +274,42 @@ const RE_SIMBOLI = new RegExp(String.raw`\\(` + Object.keys(SIMBOLI).filter(k =>
 export function latexInTesto(t) {
   let s = String(t).replace(/\*\*/g, '').replace(/\$\$?/g, '');
   s = s.replace(/\{,\}/g, ',');                                     // 5{,}97 -> 5,97
+  s = s.replace(/\\ /g, ' ').replace(/\\[,;:!]/g, ' ');            // spazi di LaTeX
+  // sistemi: { riga1 ; riga2 }
   s = s.replace(/\\begin\{[a-z]*cases\}([\s\S]*?)\\end\{[a-z]*cases\}/g,
-    (_, righe) => `{ ${righe.split(/\\\\/).map(r => r.replace(/&/g, ' ').trim()).join(' ; ')} }`);
-  s = s.replace(/\\\\/g, ' ; ').replace(/&/g, ' ');
-  s = s.replace(/\\(left|right|big|Big|bigg|displaystyle|limits)\b\.?/g, '');
+    (_, righe) => `⟨{ ${righe.split(/\\\\/).map(r => r.replace(/&/g, ' ').trim()).filter(Boolean).join(' ; ')} }⟩`);
+  // tabelle (array, tabular, matrix…): colonne separate da |, righe da ;
+  s = s.replace(/\\begin\{[a-z]*\*?\}(?:\{[^{}]*\})?([\s\S]*?)\\end\{[a-z]*\*?\}/g,
+    (_, righe) => righe.replace(/\\hline/g, '').split(/\\\\/).map(r => r.split('&').map(c => c.trim()).join(' | ').trim()).filter(Boolean).join(' ; '));
+  s = s.replace(/\\hline/g, '').replace(/\\\\/g, ' ; ').replace(/&/g, ' ');
+  s = s.replace(/\\(left|right|bigg|Bigg|big|Big|displaystyle|limits|nolimits)\b\.?/g, '');
+  s = s.replace(/\\overset\{\\frown\}\{([^{}]*)\}/g, '⌒$1');        // arco AB
+  s = s.replace(/\\not\s*\\?/g, '¬');
+  // comandi "di stile" con una sola lettera senza graffe: \mathbb R, \vec v
+  s = s.replace(/\\(mathbb|mathcal|mathrm|mathbf|vec|hat|bar|overline)\s+([A-Za-z0-9])/g, '\\$1{$2}');
   s = s.replace(/\\mathbb\{(\w)\}/g, (_, l) => MATBB[l] || l);
   let prima;
   do {
     prima = s;
-    s = s.replace(/\\(?:text|mathrm|mathbf|mathit|operatorname|overline|overrightarrow|widehat|hat|bar|vec)\{([^{}]*)\}/g, '$1');
+    s = s.replace(/\\(?:text|textbf|textit|mathrm|mathbf|mathit|mathcal|boldsymbol|operatorname|mbox)\{([^{}]*)\}/g, '$1');
+    s = s.replace(/\\overline\{([^{}]*)\}/g, (_, x) => [...x].map(c => (/\w/.test(c) ? c + '̅' : c)).join(''));
+    s = s.replace(/\\(?:widehat|hat)\{([^{}]*)\}/g, (_, x) => (x.length === 1 ? x + '̂' : `∠${x}`));
+    s = s.replace(/\\(?:vec|overrightarrow)\{([^{}]*)\}/g, (_, x) => `${x}⃗`);
+    s = s.replace(/\\bar\{([^{}]*)\}/g, (_, x) => `${x}̄`);
+    s = s.replace(/\\overset\{([^{}]*)\}\{([^{}]*)\}/g, '$2');
+    s = s.replace(/\\binom\{([^{}]*)\}\{([^{}]*)\}/g, 'C($1, $2)');
     s = s.replace(RE_FRAC, (_, a1, a2, b1, b2) => `${tonda((a1 ?? a2).trim())}/${tonda((b1 ?? b2).trim())}`);
-    s = s.replace(/\\sqrt\[([^\]]*)\]\{([^{}]*)\}/g, (_, n, x) => `${[...n].map(c => APICI[c] || c).join('')}√${tonda(x.trim())}`);
+    s = s.replace(RE_RADN, (_, n, a, b) => { const x = (a ?? b).trim(); return `${[...n].map(c => APICI[c] || c).join('')}√${x ? tonda(x) : ''}`; });
+    s = s.replace(/\\sqrt\{\s*\}/g, '√');
     s = s.replace(RE_RADQ, (_, a, b) => `√${tonda((a ?? b).trim())}`);
     s = s.replace(/\^\{([^{}]*)\}/g, (_, x) => ([...x].every(c => APICI[c]) ? [...x].map(c => APICI[c]).join('') : `^(${x})`));
-    s = s.replace(/_\{([^{}]*)\}/g, (_, x) => ([...x].every(c => PEDICI[c]) ? [...x].map(c => PEDICI[c]).join('') : `_${x}`));
+    s = s.replace(/_\{([^{}]*)\}/g, (_, x) => ([...x].every(c => PEDICI[c]) ? [...x].map(c => PEDICI[c]).join('') : (x.length > 1 ? `(${x})` : x)));
   } while (s !== prima);
   s = s.replace(/\^\\circ/g, '°').replace(/\^(\w)/g, (_, c) => APICI[c] || `^${c}`).replace(/_(\w)/g, (_, c) => PEDICI[c] || c);
   s = s.replace(RE_SIMBOLI, (m, nome) => (nome in SIMBOLI ? SIMBOLI[nome] : nome));
-  s = s.replace(/(^|[^ ])[{}](?=[^ ]|$)/g, '$1').replace(/\s+/g, ' ').trim();
+  // le graffe rimaste sono solo raggruppamenti di LaTeX: via (tranne quelle dei sistemi)
+  s = s.replace(/⟨\{|\}⟩/g, m => (m === '⟨{' ? '\u0001' : '\u0002')).replace(/[{}]/g, '').replace(/\u0001/g, '{').replace(/\u0002/g, '}');
+  s = s.replace(/\\/g, '').replace(/\s+/g, ' ').trim();
   return s;
 }
 

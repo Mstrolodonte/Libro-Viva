@@ -17,11 +17,12 @@ import { disegnaLibreria, disegnaHomeLibro, entraNelLibro, creaCopertina } from 
 import { db } from './db.js';
 
 const CHIAVE_VISTA = 'libroVivo.vista';
-const VISTE_LIBRO = ['home', 'libro', 'esercizi', 'progressi', 'altro'];
+const VISTE_LIBRO = ['home', 'libro', 'esercizi', 'altro'];
 
-/** Mostra una sezione: libreria | home | libro | esercizi (= esercizi e compiti) | progressi | altro */
+/** Mostra una sezione: libreria | home | libro | esercizi (= esercizi e compiti) | altro */
 function mostraVista(nome) {
   if (nome === 'compiti') nome = 'esercizi';   // Compiti ed Esercizi ora sono una sezione sola
+  if (nome === 'progressi') nome = 'libro';     // i progressi ora sono nel pannello dei capitoli
   $$('.vista').forEach(v => v.classList.toggle('attiva', v.id === `vista-${nome}`));
   $$('#barra-schede button').forEach(b => b.classList.toggle('attivo', b.dataset.vista === nome));
   document.body.dataset.vista = nome;

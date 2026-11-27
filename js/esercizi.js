@@ -326,7 +326,8 @@ export function leggiRichiesta(testo) {
   // Regola: in ogni gruppo il PRIMO numero è la pagina, gli altri sono esercizi.
   const out = [];
   const t = String(testo).toLowerCase().replace(/[–—]/g, '-');
-  const gruppi = t.split(/[;\n]+|(?=\bp(?:ag(?:ina)?|g)?\.?\s*\d)/);
+  // un gruppo nuovo comincia con: ";", a capo, "p."/"pag", oppure "546 es" / "546 n." / "546/"
+  const gruppi = t.split(/[;\n]+|(?=\bp(?:ag(?:ina)?|g)?\.?\s*\d)|(?=\b\d+\s*(?:es\b|es\.|eserciz|n\.|n\b|nr|numer|\/))/);
   for (const g of gruppi) {
     const numeri = [...g.matchAll(/(\d+)(?:\s*-\s*(\d+))?/g)];
     if (numeri.length < 2) continue;

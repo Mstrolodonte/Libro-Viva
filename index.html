@@ -42,6 +42,14 @@
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5l11 6.5-11 6.5z"/></symbol>
   <symbol id="i-cartella" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2.5h8a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M12 11v5M9.5 13.5L12 16l2.5-2.5"/></symbol>
   <symbol id="i-ingranaggio" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M2.8 12h2.4M18.8 12h2.4M5.5 5.5l1.7 1.7M16.8 16.8l1.7 1.7M5.5 18.5l1.7-1.7M16.8 7.2l1.7-1.7"/></symbol>
+  <symbol id="i-mano" viewBox="0 0 24 24"><path d="M8 13V5.5a1.5 1.5 0 0 1 3 0V11M11 10.5V4a1.5 1.5 0 0 1 3 0v6.5M14 10.5V5.5a1.5 1.5 0 0 1 3 0V12M17 9.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1.5a6 6 0 0 1-4.6-2.2L4.5 15.5a1.6 1.6 0 0 1 2.4-2.1L8 14.5"/></symbol>
+  <symbol id="i-stilo" viewBox="0 0 28 28"><path d="M10 27V11l4-8 4 8v16"/><path d="M10 11h8M12.6 6h2.8"/></symbol>
+  <symbol id="i-evidenziatore" viewBox="0 0 28 28"><path d="M9 27V13l2-2V5h6v6l2 2v14"/><path d="M9 13h10"/></symbol>
+  <symbol id="i-gomma" viewBox="0 0 28 28"><rect x="9" y="5" width="10" height="23" rx="3"/><path d="M9 12h10"/></symbol>
+  <symbol id="i-annulla" viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+  <symbol id="i-rifai" viewBox="0 0 24 24"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+  <symbol id="i-cestino" viewBox="0 0 24 24"><path d="M4 7h16M10 7V4.5h4V7M6.5 7l1 13h9l1-13M10.5 11v5.5M13.5 11v5.5"/></symbol>
+  <symbol id="i-pencil" viewBox="0 0 24 24"><path d="M5 19l1-4L16.5 4.5a2 2 0 0 1 3 3L9 18z"/><path d="M3 21h4"/></symbol>
 </svg>
 
 
@@ -69,23 +77,30 @@
   </div>
 </header>
 
-<!-- barra della penna -->
+<!-- barra della penna (stile Notability / GoodNotes) -->
 <div id="barra-penna" hidden>
-  <button data-strumento="mano" class="btn-icona" aria-label="Mano (non scrivere)">✋</button>
-  <button data-strumento="penna" class="btn-icona" aria-label="Penna">🖊️</button>
-  <button data-strumento="evid" class="btn-icona" aria-label="Evidenziatore">🖍️</button>
-  <button data-strumento="gomma" class="btn-icona" aria-label="Gomma">🧽</button>
+  <div class="gruppo-penna strumenti-penna">
+    <button data-strumento="mano" class="btn-strumento" aria-label="Mano (sfoglia, non scrive)"><svg class="ic"><use href="#i-mano"/></svg></button>
+    <button data-strumento="penna" class="btn-strumento" aria-label="Penna"><svg class="ic-grande" viewBox="0 0 28 28"><use href="#i-stilo"/></svg><i class="punta"></i></button>
+    <button data-strumento="evid" class="btn-strumento" aria-label="Evidenziatore"><svg class="ic-grande" viewBox="0 0 28 28"><use href="#i-evidenziatore"/></svg><i class="punta"></i></button>
+    <button data-strumento="gomma" class="btn-strumento" aria-label="Gomma"><svg class="ic-grande" viewBox="0 0 28 28"><use href="#i-gomma"/></svg></button>
+  </div>
   <span class="sep"></span>
-  <span id="posto-colori"></span>
+  <div class="gruppo-penna" id="posto-colori"></div>
   <span class="sep"></span>
-  <button data-spessore="1" class="btn-icona spessore" aria-label="Fine"><i style="width:4px;height:4px"></i></button>
-  <button data-spessore="2" class="btn-icona spessore attivo" aria-label="Medio"><i style="width:7px;height:7px"></i></button>
-  <button data-spessore="4" class="btn-icona spessore" aria-label="Grosso"><i style="width:11px;height:11px"></i></button>
+  <div class="gruppo-penna spessori">
+    <button data-spessore="1" class="spessore" aria-label="Fine"><i style="width:4px;height:4px"></i></button>
+    <button data-spessore="2" class="spessore attivo" aria-label="Medio"><i style="width:8px;height:8px"></i></button>
+    <button data-spessore="4" class="spessore" aria-label="Grosso"><i style="width:13px;height:13px"></i></button>
+  </div>
   <span class="sep"></span>
-  <button id="btn-annulla" class="btn-icona" aria-label="Annulla">↩︎</button>
-  <button id="btn-rifai" class="btn-icona" aria-label="Rifai">↪︎</button>
-  <button id="btn-svuota-pagina" class="btn-icona" aria-label="Cancella tutto sulla pagina">🗑</button>
-  <button id="btn-solo-pencil" class="btn-testo" title="Se attivo, solo l'Apple Pencil scrive e il dito sfoglia">✍️ Solo Pencil</button>
+  <div class="gruppo-penna">
+    <button id="btn-annulla" class="btn-icona" aria-label="Annulla"><svg class="ic"><use href="#i-annulla"/></svg></button>
+    <button id="btn-rifai" class="btn-icona" aria-label="Rifai"><svg class="ic"><use href="#i-rifai"/></svg></button>
+    <button id="btn-svuota-pagina" class="btn-icona" aria-label="Cancella tutto sulla pagina"><svg class="ic"><use href="#i-cestino"/></svg></button>
+    <button id="btn-solo-pencil" class="btn-icona" aria-label="Solo Apple Pencil" title="Se attivo, solo l'Apple Pencil scrive e il dito sfoglia"><svg class="ic"><use href="#i-pencil"/></svg></button>
+    <button id="btn-chiudi-penna" class="btn-fatto" aria-label="Chiudi la penna">Fine</button>
+  </div>
 </div>
 
 <main>
@@ -135,32 +150,20 @@
   <section id="vista-esercizi" class="vista pagina-testo">
     <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
     <h1>Esercizi e compiti</h1>
-    <form id="form-esercizi" class="card" autocomplete="off">
-      <label class="etichetta">Quali esercizi? Scrivili come li detta il prof
-        <textarea id="es-testo" class="campo" rows="2" placeholder="p. 546 es. 12, 15, 20-22; p. 547 es. 3"></textarea>
-      </label>
-      <div class="riga-campi">
-        <button class="btn primario">🔍 Mostra tutti</button>
-        <button id="btn-es-pdf" type="button" class="btn">📄 Crea PDF</button>
-        <label class="etichetta stretta">Compiti per il giorno <input id="es-data" class="campo" type="date"></label>
-        <button id="btn-es-salva" type="button" class="btn">💾 Salva nei compiti</button>
+    <form id="form-esercizi" class="card form-esercizi" autocomplete="off">
+      <label class="etichetta" for="es-testo">Quali esercizi? Scrivili come li detta il prof</label>
+      <textarea id="es-testo" class="campo" rows="2" placeholder="p. 546 es. 12, 15, 20-22 p. 547 es. 3"></textarea>
+      <div class="riga-bottoni sinistra">
+        <button class="btn primario">🔍 Mostra gli esercizi</button>
+        <button id="btn-es-pdf" type="button" class="btn">📄 Crea il PDF</button>
       </div>
-      <p class="nota">Va bene anche "546 12 15" o una pagina per riga. Uso la pagina stampata: se l'esercizio non è lì, lo cerco nelle pagine vicine.</p>
+      <p class="nota">Puoi scrivere più pagine di fila, anche senza ";": "p. 546 es. 12, 15 p. 547 es. 3" oppure "546 es 12 15 547 es 3".</p>
     </form>
     <div id="es-risultati"></div>
-    <div id="compiti-box"><h2>📅 I miei compiti</h2><div id="compiti-liste"></div></div>
-    <div id="es-recenti-box" hidden><h2>Recenti</h2><div id="es-recenti" class="griglia-tessere"></div></div>
     <div id="es-difficili-box" hidden><h2>⚠️ Difficili</h2><div id="es-difficili" class="griglia-tessere"></div></div>
     <div id="es-preferiti-box" hidden><h2>⭐ Preferiti</h2><div id="es-preferiti" class="griglia-tessere"></div></div>
   </section>
 
-  <!-- ============ PROGRESSI ============ -->
-  <section id="vista-progressi" class="vista pagina-testo">
-    <button class="btn torna-libreria" data-vai="home">‹ Sezioni</button>
-    <h1>Progressi</h1>
-    <p id="progressi-totale" class="nota"></p>
-    <div id="progressi-unita" class="card lista-unita"></div>
-  </section>
 
   <!-- ============ ALTRO ============ -->
   <section id="vista-altro" class="vista pagina-testo">
@@ -176,7 +179,6 @@
   <button data-vista="home"><span><svg class="ic"><use href="#i-sezioni"/></svg></span>Sezioni</button>
   <button data-vista="libro"><span><svg class="ic"><use href="#i-leggi"/></svg></span>Leggi</button>
   <button data-vista="esercizi"><span><svg class="ic"><use href="#i-esercizi"/></svg></span>Esercizi</button>
-  <button data-vista="progressi"><span><svg class="ic"><use href="#i-progressi"/></svg></span>Progressi</button>
   <button data-vista="altro"><span><svg class="ic"><use href="#i-altro"/></svg></span>Altro</button>
 </nav>
 
@@ -184,6 +186,7 @@
 <aside id="pannello-capitoli" class="pannello">
   <div class="pannello-corpo">
     <div class="scheda-testa"><h2>Capitoli</h2><button id="chiudi-capitoli" class="btn-icona" aria-label="Chiudi">✕</button></div>
+    <div id="progressi-totale"></div>
     <ul id="lista-capitoli" class="lista-capitoli"></ul>
     <h2>Segnalibri</h2>
     <ul id="lista-segnalibri" class="lista-capitoli"></ul>

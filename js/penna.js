@@ -17,8 +17,8 @@ let corrente = null;      // tratto che sto disegnando
 let attivo = false;       // barra penna aperta?
 const strumento = { tipo: 'penna', colore: '#1a1a1a', coloreEvid: '#ffe14d', spessore: 2 };
 
-const COLORI = ['#1a1a1a', '#1f5fd6', '#d62f2f', '#1e9e4a'];
-const COLORI_EVID = ['#ffe14d', '#7ff0a0', '#ff9bd2', '#8fd3ff'];
+const COLORI = ['#1a1a1a', '#1f5fd6', '#d62f2f', '#1e9e4a', '#8a3fd1', '#e07b00'];
+const COLORI_EVID = ['#ffe14d', '#7ff0a0', '#ff9bd2', '#8fd3ff', '#ffb366'];
 
 /** Prepara la barra della penna (una volta sola) */
 export function init() {
@@ -212,20 +212,29 @@ function svuotaPagina() {
 /** Collega i bottoni della barra penna (la barra è in index.html) */
 function costruisciBarra() {
   const barra = $('#barra-penna');
+  // la punta colorata sulle icone di penna ed evidenziatore (come GoodNotes)
+  const aggiornaPunte = () => {
+    barra.style.setProperty('--colore-penna', strumento.colore);
+    barra.style.setProperty('--colore-evid', strumento.coloreEvid);
+  };
   const sceltaStrumento = tipo => {
     strumento.tipo = tipo;
     $$('[data-strumento]', barra).forEach(b => b.classList.toggle('attivo', b.dataset.strumento === tipo));
-    $$('.colori-penna', barra).forEach(g => { g.hidden = g.dataset.per !== (tipo === 'evid' ? 'evid' : 'penna'); });
+    const perEvid = tipo === 'evid';
+    $$('.colori-penna', barra).forEach(g => { g.hidden = g.dataset.per !== (perEvid ? 'evid' : 'penna'); });
+    // colori e spessori servono solo per penna ed evidenziatore
+    barra.classList.toggle('senza-colori', tipo === 'mano' || tipo === 'gomma');
+  };
+  const scegliColore = (c, evid) => {
+    if (evid) strumento.coloreEvid = c; else strumento.colore = c;
+    $$(`.colori-penna[data-per="${evid ? 'evid' : 'penna'}"] .colore`, barra).forEach(x => x.classList.toggle('attivo', x.dataset.colore === c));
+    aggiornaPunte();
   };
   barra.addEventListener('click', e => {
     const b = e.target.closest('button');
     if (!b) return;
     if (b.dataset.strumento) sceltaStrumento(b.dataset.strumento);
-    if (b.dataset.colore) {
-      const evid = strumento.tipo === 'evid';
-      if (evid) strumento.coloreEvid = b.dataset.colore; else strumento.colore = b.dataset.colore;
-      $$(`.colori-penna[data-per="${evid ? 'evid' : 'penna'}"] button`, barra).forEach(x => x.classList.toggle('attivo', x === b));
-    }
+    if (b.dataset.colore) scegliColore(b.dataset.colore, strumento.tipo === 'evid');
     if (b.dataset.spessore) {
       strumento.spessore = Number(b.dataset.spessore);
       $$('[data-spessore]', barra).forEach(x => x.classList.toggle('attivo', x === b));
@@ -234,6 +243,7 @@ function costruisciBarra() {
     if (b.id === 'btn-rifai') rifai();
     if (b.id === 'btn-svuota-pagina') svuotaPagina();
     if (b.id === 'btn-solo-pencil') salvaImpostazione('soloPencil', !impostazioni().soloPencil);
+    if (b.id === 'btn-chiudi-penna') attiva(false);
   });
   const gruppo = (per, colori) => {
     const g = document.createElement('div');
@@ -243,14 +253,31 @@ function costruisciBarra() {
       const b = document.createElement('button');
       b.className = 'colore' + (i === 0 ? ' attivo' : '');
       b.dataset.colore = c;
-      b.style.background = c;
+      b.style.setProperty('--c', c);
       b.setAttribute('aria-label', `Colore ${i + 1}`);
       g.append(b);
     });
+    // colore a scelta (ruota dei colori)
+    const altro = document.createElement('label');
+    altro.className = 'colore altro';
+    altro.title = 'Altro colore';
+    const input = document.createElement('input');
+    input.type = 'color';
+    input.value = colori[0];
+    input.addEventListener('input', () => {
+      altro.style.setProperty('--c', input.value);
+      altro.classList.add('scelto');
+      if (per === 'evid') strumento.coloreEvid = input.value; else strumento.colore = input.value;
+      $$('.colore', g).forEach(x => x.classList.toggle('attivo', x === altro));
+      aggiornaPunte();
+    });
+    altro.append(input);
+    g.append(altro);
     return g;
   };
   $('#posto-colori').append(gruppo('penna', COLORI), gruppo('evid', COLORI_EVID));
   sceltaStrumento('penna');
+  aggiornaPunte();
 }
 
 /** Il foglio i non mostra più nessuna pagina (es. torno a una pagina sola) */

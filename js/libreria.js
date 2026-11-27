@@ -12,6 +12,8 @@ import { db } from './db.js';
 import { stato, on, emit, elencoLibri, salvaLibroDef, eliminaLibro, apriLibro, leggiUltimaPagina, salvaPdf } from './stato.js';
 import { LIBRO, UNITA, LIBRO_VUOTO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
 import { testoPagina } from './pdf.js';
+import { progressiPerUnita, barraProgresso } from './viste.js';
+import { elencoClassi, classeScelta, apriSceltaClasse, serveSceltaClasse } from './classi.js';
 
 const MATERIE = ['Matematica', 'Italiano', 'Inglese', 'Fisica', 'Storia', 'Geografia', 'Scienze', 'Chimica',
   'Informatica', 'Tecnologia', 'Disegno', 'Diritto', 'Religione', 'Altro'];
@@ -47,10 +49,24 @@ export async function creaCopertina() {
 // ---------------------------------------------------------------------
 //  SCHERMATA LIBRERIA
 // ---------------------------------------------------------------------
+let sceltaChiesta = false;
 export async function disegnaLibreria() {
-  const libri = (await elencoLibri()).filter(l => !l.nascosto);
+  const classi = await elencoClassi();
+  const classe = await classeScelta();
+  // prima volta (o classe cancellata): scegli la tua classe
+  if (!sceltaChiesta && await serveSceltaClasse()) {
+    sceltaChiesta = true;
+    apriSceltaClasse({ obbligatoria: true });
+  }
+  let libri = (await elencoLibri()).filter(l => !l.nascosto);
+  if (classe) libri = libri.filter(l => classe.libri.includes(l.id));
   const box = $('#libreria-contenuto');
   const pezzi = [];
+  if (classi.length) {
+    pezzi.push(el('button', { class: 'chip-classe', onclick: () => apriSceltaClasse() },
+      el('span', {}, '📁'), el('b', {}, classe ? `Classe ${classe.nome}` : 'Tutti i libri'), el('small', {}, 'Cambia')));
+  }
+  if (classe && !libri.length) pezzi.push(el('p', { class: 'vuoto' }, `La classe ${classe.nome} non ha ancora libri. L'admin li sceglie in Altro → Admin → Classi.`));
 
   const griglia = el('div', { class: 'griglia-libri' });
   for (const l of libri) {
@@ -119,7 +135,6 @@ export async function disegnaHomeLibro() {
   }
   sezioni.append(
     tessera('esercizi', 'Esercizi e compiti', 'Tutti insieme, PDF con i quadretti', () => emit('mostra-vista', 'esercizi')),
-    tessera('progressi', 'Progressi', 'Esercizi fatti', () => emit('mostra-vista', 'progressi')),
     tessera('altro', 'Impostazioni libro', 'Capitoli, pagine, file', () => apriImpostazioniLibro()));
 
   // capitoli
@@ -127,12 +142,13 @@ export async function disegnaHomeLibro() {
   if (!UNITA.length) {
     capitoli.append(el('p', { class: 'vuoto' }, 'Nessun capitolo. ', el('button', { class: 'btn piccolo', onclick: () => apriImpostazioniLibro() }, 'Aggiungili')));
   }
+  const prog = stato.libro ? await progressiPerUnita().catch(() => new Map()) : new Map();
   for (const u of UNITA) {
     const fine = fineUnita(u);
     const vai = p => () => emit('vai-pagina', { pdf: libroToPdf(p) });
     capitoli.append(el('div', { class: 'riga-capitolo' },
       el('button', { class: 'cap-principale', onclick: vai(u.inizio) },
-        el('span', { class: 'u-num' }, u.n), el('span', { class: 'u-nome' }, u.titolo, el('small', {}, `pp. ${u.inizio}–${fine}`))),
+        el('span', { class: 'u-num' }, u.n), el('span', { class: 'u-nome' }, u.titolo, el('small', {}, `pp. ${u.inizio}–${fine}`), barraProgresso(prog.get(u.n)))),
       el('div', { class: 'cap-link' },
         u.esercizi ? el('button', { onclick: vai(u.esercizi) }, `Esercizi p. ${u.esercizi}`) : '',
         u.autoverifica ? el('button', { onclick: vai(u.autoverifica) }, `Autoverifica p. ${u.autoverifica}`) : '')));
@@ -380,4 +396,5 @@ export async function apriImpostazioniLibro() {
 }
 
 on('libri-cambiati', () => { if ($('#vista-libreria')?.classList.contains('attiva')) disegnaLibreria(); });
+on('classi-cambiate', () => { if ($('#vista-libreria')?.classList.contains('attiva')) disegnaLibreria(); });
 on('libro-modificato', () => { if ($('#vista-home')?.classList.contains('attiva')) disegnaHomeLibro(); });
