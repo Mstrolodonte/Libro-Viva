@@ -7,7 +7,7 @@ import { $, el, toast, apriScheda, conferma, scaricaFile, eIOS } from './ui.js';
 import { creaPdfCompiti } from './pdfcompiti.js';
 import { db, ldb } from './db.js';
 import { stato, on, emit } from './stato.js';
-import { UNITA, LIBRO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
+import { UNITA, LIBRO, libroToPdf, etichettaPagina, fineUnita, nomeUnita } from './config.js';
 import { apriEsercizio, leggiRichiesta, chiave, tuttiGliEsercizi, caricaIndici, unitaDiPagina, cercaEsercizio, contenutoEsercizio } from './esercizi.js';
 import { testoPagina } from './pdf.js';
 
@@ -219,7 +219,7 @@ async function disegnaCapitoli() {
     const qui = att >= libroToPdf(u.inizio) && att <= libroToPdf(fine);
     return el('li', { class: qui ? 'qui' : '' },
       el('button', { class: 'cap-titolo', onclick: () => vai(libroToPdf(u.inizio)) },
-        el('b', {}, `Unità ${u.n}`), ` ${u.titolo}`, el('small', {}, `pp. ${u.inizio}–${fine}`), barraProgresso(prog.get(u.n))),
+        nomeUnita(u) ? el('b', {}, nomeUnita(u) + ' ') : '', u.titolo, u.inizio >= 1 ? el('small', {}, `pp. ${u.inizio}–${fine}`) : '', barraProgresso(prog.get(u.n))),
       el('div', { class: 'cap-link' },
         el('button', { onclick: () => vai(libroToPdf(u.inizio)) }, 'Teoria'),
         u.esercizi ? el('button', { onclick: () => vai(libroToPdf(u.esercizi)) }, `Esercizi p. ${u.esercizi}`) : '',

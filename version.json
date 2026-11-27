@@ -1,7 +1,7 @@
 {
- "versione": "1.7.6",
+ "versione": "1.7.7",
  "data": "2026-11-27",
- "novita": "Corretto: con l'evidenziatore alcune parti del libro sparivano (memoria dell'iPad)",
+ "novita": "Capitoli dei libri sistemati: numero del capitolo preso dal libro, pagine iniziali senza numero",
  "file": [
   "index.html",
   "manifest.webmanifest",

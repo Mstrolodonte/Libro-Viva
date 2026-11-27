@@ -66,8 +66,29 @@ export const UNITA = [...MATEMATICA.unita.map(u => ({ ...u }))];
 export function impostaLibroCorrente(def) {
   for (const k of Object.keys(LIBRO)) delete LIBRO[k];
   Object.assign(LIBRO, LIBRO_VUOTO, def);
-  UNITA.splice(0, UNITA.length, ...(def.unita || []).map(u => ({ ...u })));
+  // libri aggiunti: il numero del capitolo viene dal titolo ("1 · La misura", "Unit 3 · …")
+  UNITA.splice(0, UNITA.length, ...(def.unita || []).map(u =>
+    (def.indiciApp || u.etichetta !== undefined ? { ...u } : { ...u, ...separaTitolo(u.titolo) })));
 }
+
+const RE_ETICHETTA = /^\s*((?:Unit[àa]?|Cap\.?|Capitolo|Chapter|Lezione|Modulo|Sez\.?|Sezione|UdA)\s*[0-9A-Z]{1,3}|\d{1,2})\s*[·.:–-]\s*(.+)$/i;
+/** "1 · La misura" -> { etichetta: 'Cap. 1', titolo: 'La misura' }; senza numero etichetta = '' */
+const RE_SOLO_ETICHETTA = /^\s*((?:Unit[àa]?|Cap\.?|Capitolo|Chapter|Lezione|Modulo|Sez\.?|Sezione|UdA)\s*[0-9A-Z]{1,3})\s*$/i;
+export function separaTitolo(titolo = '') {
+  const solo = titolo.match(RE_SOLO_ETICHETTA);       // "Unit 1" senza titolo
+  if (solo) return { etichetta: solo[1].replace(/\s+/g, ' '), titolo: '' };
+  const m = titolo.match(RE_ETICHETTA);
+  if (!m) return { etichetta: '', titolo: titolo.trim() };
+  return { etichetta: /^\d+$/.test(m[1]) ? `Cap. ${m[1]}` : m[1].replace(/\s+/g, ' '), titolo: m[2].trim() };
+}
+/** Nome corto del capitolo da mostrare: "Unità 3", "Cap. 1", "Unit 2", "Sez. A" oppure '' */
+export function nomeUnita(u) {
+  if (!u) return '';
+  if (u.etichetta !== undefined) return u.etichetta;
+  return `Unità ${u.n}`;
+}
+/** "Cap. 1 · La misura" oppure solo "Indice" */
+export const titoloCompleto = u => (nomeUnita(u) ? `${nomeUnita(u)} · ${u.titolo}` : u.titolo);
 
 // Ricerca esercizi: prima ±5 pagine, poi si allarga di 5 in 5 fino a questo limite
 export const RICERCA = { passo: 5, massimo: 40 };

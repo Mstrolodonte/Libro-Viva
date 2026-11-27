@@ -10,7 +10,7 @@
 import { $ } from './ui.js';
 import { stato, on, emit, salvaUltimaPagina, impostazioni, salvaImpostazione } from './stato.js';
 import { disegnaPagina } from './pdf.js';
-import { etichettaPagina, interpretaPagina, unitaDiPdf, pdfToLibro } from './config.js';
+import { etichettaPagina, interpretaPagina, unitaDiPdf, pdfToLibro, titoloCompleto } from './config.js';
 import * as penna from './penna.js';
 
 const ZOOM_MIN = 1, ZOOM_MAX = 5;
@@ -138,7 +138,7 @@ function aggiornaBarra() {
   }
   $('#totale-pagine').textContent = `PDF ${sx}${dx ? '–' + dx : ''} di ${stato.totalePagine}`;
   const u = unitaDiPdf(stato.pagina);
-  $('#titolo-unita').textContent = u ? `Unità ${u.n} · ${u.titolo}` : 'Libro';
+  $('#titolo-unita').textContent = u ? titoloCompleto(u) : 'Libro';
   $('#btn-zoom-adatta').textContent = `${Math.round(zoom * 100)}%`;
   $('#btn-due-pagine').classList.toggle('attivo', dueAttive());
   $('#btn-due-pagine').innerHTML = `<svg class="ic"><use href="#i-${dueAttive() ? 'due-pagine' : 'una-pagina'}"/></svg>`;

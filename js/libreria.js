@@ -10,7 +10,7 @@
 import { $, el, toast, apriScheda, conferma, scegliFile, icona } from './ui.js';
 import { db } from './db.js';
 import { stato, on, emit, elencoLibri, salvaLibroDef, eliminaLibro, apriLibro, leggiUltimaPagina, salvaPdf } from './stato.js';
-import { LIBRO, UNITA, LIBRO_VUOTO, libroToPdf, etichettaPagina, fineUnita } from './config.js';
+import { LIBRO, UNITA, LIBRO_VUOTO, libroToPdf, etichettaPagina, fineUnita, nomeUnita, separaTitolo } from './config.js';
 import { testoPagina } from './pdf.js';
 import { progressiPerUnita, barraProgresso } from './viste.js';
 import { elencoClassi, classeScelta, apriSceltaClasse, serveSceltaClasse } from './classi.js';
@@ -99,6 +99,7 @@ export async function entraNelLibro(id, { leggi = false } = {}) {
   try {
     const c = await apriLibro(id);
     try { localStorage.setItem('libroVivo.libroAperto', id); } catch (e) { /* */ }
+    if (c) await aggiornaCapitoli(id);
     // copertina mancante (es. libro importato con la versione 1.0): la creo ora
     if (c && !(await db.get('kv', `${id}:copertina`))) creaCopertina().catch(() => {});
     emit('mostra-vista', leggi && c ? 'libro' : 'home');
@@ -148,7 +149,7 @@ export async function disegnaHomeLibro() {
     const vai = p => () => emit('vai-pagina', { pdf: libroToPdf(p) });
     capitoli.append(el('div', { class: 'riga-capitolo' },
       el('button', { class: 'cap-principale', onclick: vai(u.inizio) },
-        el('span', { class: 'u-num' }, u.n), el('span', { class: 'u-nome' }, u.titolo, el('small', {}, `pp. ${u.inizio}–${fine}`), barraProgresso(prog.get(u.n)))),
+        el('span', { class: 'u-num' }, numeroCorto(u)), el('span', { class: 'u-nome' }, u.titolo, u.inizio >= 1 ? el('small', {}, `pp. ${u.inizio}–${fine}`) : '', barraProgresso(prog.get(u.n)))),
       el('div', { class: 'cap-link' },
         u.esercizi ? el('button', { onclick: vai(u.esercizi) }, `Esercizi p. ${u.esercizi}`) : '',
         u.autoverifica ? el('button', { onclick: vai(u.autoverifica) }, `Autoverifica p. ${u.autoverifica}`) : '')));
@@ -216,13 +217,13 @@ async function importaEAnalizza(id, file) {
       stop.remove();
     }
     const def = (await elencoLibri()).find(l => l.id === id);
-    await salvaLibroDef({ ...def, offset, unita: capitoli, ultimaPaginaLibro: stato.totalePagine - offset, primaPaginaLibro: Math.max(1, 1 - offset) });
+    await salvaLibroDef({ ...def, offset, unita: capitoli, versioneCapitoli: 2, ultimaPaginaLibro: stato.totalePagine - offset, primaPaginaLibro: Math.max(1, 1 - offset) });
     s.chiudi();
     const r = apriScheda('✅ Libro aggiunto');
     r.corpo.append(
       el('p', {}, `Pagine: ${stato.totalePagine}. `, offset ? `La pagina stampata è la pagina del PDF ${offset > 0 ? '−' : '+'} ${Math.abs(offset)}.` : 'Le pagine stampate coincidono con quelle del PDF.'),
       el('p', {}, capitoli.length ? `Ho trovato ${capitoli.length} capitoli:` : 'Non ho trovato i capitoli: puoi aggiungerli tu.'),
-      capitoli.length ? el('ul', { class: 'elenco-corto' }, ...capitoli.slice(0, 30).map(c => el('li', {}, `${c.titolo} — p. ${c.inizio}`))) : '',
+      capitoli.length ? el('ul', { class: 'elenco-corto' }, ...capitoli.slice(0, 30).map(c => el('li', {}, `${[c.etichetta, c.titolo].filter(Boolean).join(' · ')}${c.inizio >= 1 ? ` — p. ${c.inizio}` : ''}`))) : '',
       el('p', { class: 'nota' }, 'Se qualcosa non torna, correggilo in Impostazioni libro.'),
       el('div', { class: 'riga-bottoni' },
         el('button', { class: 'btn', onclick: () => { r.chiudi(); apriImpostazioniLibro(); } }, '✏️ Correggi'),
@@ -276,6 +277,10 @@ export async function capitoliDaIndicePdf(doc, offset) {
   try { etichette = await doc.getPageLabels(); } catch (e) { /* */ }
   let voci = outline;
   if (voci.length === 1 && voci[0].items?.length) voci = voci[0].items;   // un solo titolo "contenitore"
+  // voci "contenitore" (es. "Student's Book" con dentro le Unit, "La narrazione breve"
+  // con dentro i Cap.): apro anche le voci interne
+  const NUMERATA = /^(?:Unit[àa]?|Cap\.?|Capitolo|Chapter|Lezione|Modulo|Sez\.?|Sezione|UdA)\s*[0-9A-Z]{1,3}\b|^\d{1,2}\s*[·.]/i;
+  voci = voci.flatMap(v => ((v.items || []).filter(f => NUMERATA.test(f.title.trim())).length >= 2 ? [{ ...v, items: [] }, ...v.items.map(f => ({ ...f, genitore: v.title.trim() }))] : [v]));
 
   // Pagina stampata di una voce del sommario (null se non ha pagina)
   const paginaDi = async v => {
@@ -293,17 +298,19 @@ export async function capitoliDaIndicePdf(doc, offset) {
   for (const v of voci) {
     const inizio = await paginaDi(v);
     if (inizio == null) continue;
-    const c = { titolo: v.title.trim(), inizio, esercizi: null, autoverifica: null };
+    const c = { ...separaTitolo(v.title.trim()), inizio, esercizi: null, autoverifica: null };
+    if (!c.titolo) c.titolo = v.genitore || '';      // es. "Unit 1" del Workbook -> "Unit 1 · Workbook"
     // Sotto-voci "Esercizi" e "Prova di autoverifica" (come nel libro di matematica)
     for (const f of v.items || []) {
       const t = f.title.trim().toLowerCase();
       if (c.esercizi == null && /^esercizi\b|^exercises\b/.test(t)) c.esercizi = await paginaDi(f);
-      else if (c.autoverifica == null && /autoverifica|verifica finale|self.?test/.test(t)) c.autoverifica = await paginaDi(f);
+      else if (c.autoverifica == null && /autoverifica|verifica finale|self.?test|test yourself/.test(t)) c.autoverifica = await paginaDi(f);
     }
     out.push(c);
   }
   out.sort((a, b) => a.inizio - b.inizio);
-  return out.filter((c, i) => i === 0 || c.inizio !== out[i - 1].inizio).map((c, i) => ({ n: i + 1, ...c }));
+  // due voci sulla stessa pagina: tengo la più interna (es. "Welcome Unit", non "Student's Book")
+  return out.filter((c, i) => i === out.length - 1 || c.inizio !== out[i + 1].inizio).map((c, i) => ({ n: i + 1, ...c }));
 }
 
 /** Capitoli leggendo le intestazioni in cima alle pagine ("Unità 3", "Capitolo 3", "Unit 3"…) */
@@ -320,7 +327,7 @@ export async function capitoliDalleIntestazioni(doc, offset, avanzamento = () =>
     if (m && !trovati.has(Number(m[2]))) trovati.set(Number(m[2]), { pdf, parola: m[1] });
   }
   return [...trovati.entries()].sort((a, b) => a[1].pdf - b[1].pdf)
-    .map(([num, { pdf, parola }], i) => ({ n: i + 1, titolo: `${parola[0].toUpperCase()}${parola.slice(1).toLowerCase()} ${num}`, inizio: pdf - offset, esercizi: null, autoverifica: null }));
+    .map(([num, { pdf, parola }], i) => ({ n: i + 1, etichetta: `${parola[0].toUpperCase()}${parola.slice(1).toLowerCase()} ${num}`, titolo: '', inizio: pdf - offset, esercizi: null, autoverifica: null }));
 }
 
 // ---------------------------------------------------------------------
@@ -338,13 +345,14 @@ export async function apriImpostazioniLibro() {
     esempio.textContent = `Esempio: la pagina stampata 10 è la pagina ${10 + o} del PDF.`;
   };
   offset.oninput = aggEsempio; aggEsempio();
-  const testoCap = (def.unita || []).map(u => [u.titolo, u.inizio, u.esercizi || '', u.autoverifica || ''].join(' | ').replace(/( \| )+$/, '')).join('\n');
+  const testoCap = (def.unita || []).map(u => [[u.etichetta, u.titolo].filter(Boolean).join(' · '), u.inizio, u.esercizi || '', u.autoverifica || ''].join(' | ').replace(/( \| )+$/, '')).join('\n');
   const capitoli = el('textarea', { class: 'campo', rows: 10, placeholder: 'Un capitolo per riga:\nTitolo | pagina inizio | pagina esercizi | pagina autoverifica\nes.  Il racconto | 12 | 40' }, testoCap);
   const esito = el('p', { class: 'nota' });
 
   const leggiCapitoli = () => capitoli.value.split('\n').map(r => r.trim()).filter(Boolean).map((r, i) => {
     const [t, a, b, c] = r.split('|').map(x => x.trim());
-    return { n: i + 1, titolo: t || `Capitolo ${i + 1}`, inizio: Number(a) || 1, esercizi: Number(b) || null, autoverifica: Number(c) || null };
+    const tt = t || `Capitolo ${i + 1}`;
+    return { n: i + 1, ...(def.id === 'mat' ? { titolo: tt } : separaTitolo(tt)), inizio: Number(a) || 1, esercizi: Number(b) || null, autoverifica: Number(c) || null };
   }).sort((x, y) => x.inizio - y.inizio).map((u, i) => ({ ...u, n: i + 1 }));
 
   s.corpo.append(
@@ -361,7 +369,7 @@ export async function apriImpostazioniLibro() {
         let caps = await capitoliDaIndicePdf(stato.libro, o);
         if (!caps.length) caps = await capitoliDalleIntestazioni(stato.libro, o, (n, t) => { esito.textContent = `Leggo le pagine… ${n}/${t}`; });
         if (!caps.length) { esito.textContent = 'Non ho trovato capitoli: scrivili tu.'; return; }
-        capitoli.value = caps.map(u => `${u.titolo} | ${u.inizio}`).join('\n');
+        capitoli.value = caps.map(u => `${[u.etichetta, u.titolo].filter(Boolean).join(' · ')} | ${u.inizio}${u.esercizi ? ` | ${u.esercizi}` : ''}`).join('\n');
         esito.textContent = `Trovati ${caps.length} capitoli. Controlla e salva.`;
       } }, '🔍 Trova capitoli automaticamente'),
       el('button', { class: 'btn', onclick: async () => {
@@ -373,7 +381,7 @@ export async function apriImpostazioniLibro() {
     esito,
     el('div', { class: 'riga-bottoni' },
       el('button', { class: 'btn primario grande', onclick: async () => {
-        const nuovo = { ...def, materia: materia.value.trim(), titolo: titolo.value.trim() || def.titolo, offset: Number(offset.value) || 0, unita: leggiCapitoli() };
+        const nuovo = { ...def, materia: materia.value.trim(), titolo: titolo.value.trim() || def.titolo, offset: Number(offset.value) || 0, unita: leggiCapitoli(), versioneCapitoli: 2 };
         if (def.id !== 'mat' && stato.totalePagine) nuovo.ultimaPaginaLibro = stato.totalePagine - nuovo.offset;
         await salvaLibroDef(nuovo);
         s.chiudi();
@@ -405,4 +413,24 @@ export async function chiediCancellaLibro(def) {
   toast('Libro cancellato');
   if (document.body.dataset.vista !== 'libreria') emit('mostra-vista', 'libreria');
   return true;
+}
+
+/** Numero nel cerchietto: "1" da "Cap. 1", "A" da "Sez. A", un punto se non c'è */
+function numeroCorto(u) {
+  const e = nomeUnita(u);
+  return e ? e.split(' ').pop() : '•';
+}
+
+/**
+ * Libri aggiunti con le versioni vecchie: rilegge i capitoli dai segnalibri
+ * del PDF (pagine iniziali senza numero, numero del capitolo dal titolo).
+ * Una volta sola per libro.
+ */
+async function aggiornaCapitoli(id) {
+  const def = (await elencoLibri()).find(l => l.id === id);
+  if (!def || def.id === 'mat' || (def.versioneCapitoli || 0) >= 2 || !stato.libro) return;
+  try {
+    const caps = await capitoliDaIndicePdf(stato.libro, def.offset || 0);
+    await salvaLibroDef({ ...def, versioneCapitoli: 2, ...(caps.length ? { unita: caps } : {}) });
+  } catch (e) { console.error(e); }
 }
