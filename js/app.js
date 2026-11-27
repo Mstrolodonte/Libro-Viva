@@ -10,7 +10,7 @@ import { stato, on, emit, leggiUltimaPagina, impostazioni, ultimaLettura } from 
 import { pdfToLibro, libroToPdf, LIBRO } from './config.js';
 import * as lettore from './lettore.js';
 import * as penna from './penna.js';
-import { caricaIndici, apriEsercizio, eserciziDellaPagina } from './esercizi.js';
+import { caricaIndici, apriEsercizio, eserciziDellaPagina, eserciziDaTesto } from './esercizi.js';
 import { initEsercizi, initCompiti, initProgressi, initCapitoli, initRicercaTesto } from './viste.js';
 import { initAltro, applicaTema, importaDalDisco, guidaDisco, apriImpostazioniApp } from './altro.js';
 import { disegnaLibreria, disegnaHomeLibro, entraNelLibro, creaCopertina } from './libreria.js';
@@ -107,13 +107,16 @@ function collegaTocchiSullaPagina() {
   const chip = el('button', { class: 'chip-esercizio', hidden: true });
   box.append(chip);
   let timer;
-  box.addEventListener('click', e => {
+  box.addEventListener('click', async e => {
     if (penna.eAttiva() || e.target === chip) return;
     const sotto = lettore.paginaSotto(e.clientX, e.clientY);
     const p = sotto && pdfToLibro(sotto.pdf);
     if (!p) { chip.hidden = true; return; }
     const { x, y } = sotto;
-    const voce = eserciziDellaPagina(p).find(v => x >= v.b[0] && x <= v.b[2] && y >= v.b[1] && y <= v.b[3]);
+    // libri senza indice (es. Fisica): leggo i numeri degli esercizi dal testo della pagina
+    let voci = eserciziDellaPagina(p);
+    if (!voci.length && !LIBRO.indiciApp) voci = await eserciziDaTesto(p).catch(() => []);
+    const voce = voci.find(v => x >= v.b[0] && x <= v.b[2] && y >= v.b[1] && y <= v.b[3]);
     if (!voce) { chip.hidden = true; return; }
     const r = box.getBoundingClientRect();
     chip.textContent = `📝 Apri es. ${voce.es}`;

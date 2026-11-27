@@ -112,28 +112,49 @@ function unisciCifre(pezzi) {
   return out;
 }
 
-/** Ricerca "di riserva" nel testo della pagina */
-async function cercaNelTesto(pag, es) {
+/**
+ * Esercizi di una pagina trovati leggendo il testo (libri senza indice):
+ * il numero dell'esercizio è il primo pezzo della sua riga, allineato a
+ * sinistra nella sua colonna. Ogni esercizio va fino al numero successivo.
+ */
+const cacheTesto = new Map();
+on('libro-cambiato', () => cacheTesto.clear());
+export async function eserciziDaTesto(pag) {
+  const k = `${stato.idLibro}:${pag}`;
+  if (cacheTesto.has(k)) return cacheTesto.get(k);
   const pdf = libroToPdf(pag);
-  if (pdf > stato.totalePagine) return null;
+  if (!stato.libro || pdf < 1 || pdf > stato.totalePagine) return [];
   const pezzi = unisciCifre(await testoPagina(stato.libro, pdf));
-  const n = String(es);
-  // il numero deve essere da solo e il primo pezzo della sua riga
-  const cand = pezzi.filter(t => t.str.trim() === n &&
-    !pezzi.some(o => o !== t && Math.abs(o.y - t.y) < 2 && o.x < t.x && t.x - o.x < 40 && o.str.trim()));
-  if (!cand.length) return null;
-  const t = cand[0];
   const page = await stato.libro.getPage(pdf);
   const [, , W, H] = page.view;
-  const sinistra = t.x < W / 2 - 10;
-  // fine: il numero dell'esercizio successivo nella stessa colonna (se c'è)
-  const dopo = pezzi.filter(o => o.str.trim() === String(es + 1) && o.y > t.y + 4 && Math.abs(o.x - t.x) < 30).sort((a, b) => a.y - b.y)[0];
-  const fine = dopo ? dopo.y - 4 : Math.min(H - 36, t.y + 160);
-  return {
-    p: pag, es, pdf, u: unitaDiPdf(pdf)?.n,
-    b: [sinistra ? Math.max(10, t.x - 8) : t.x - 8, Math.max(10, t.y - 5), sinistra ? W / 2 + 2 : W - 10, fine],   // solo la colonna dell'esercizio
-    stimato: true,
-  };
+  const primi = pezzi.filter(t => /^\d{1,3}$/.test(t.str) && t.y > 28 && t.y < H - 30 &&
+    !pezzi.some(o => o !== t && Math.abs(o.y - t.y) < 2 && o.x < t.x && t.x - (o.x + (o.w || 0)) < 8));   // niente testo attaccato a sinistra
+  // i numeri degli esercizi hanno tutti la stessa grandezza: scarto titoli ("6 Il terzo principio")
+  // e il numero della pagina
+  const hs = primi.map(t => t.h).sort((a, b) => a - b);
+  const hMed = hs[Math.floor(hs.length / 2)] || 0;
+  const buoni = primi.filter(t => t.str !== String(pag) && Math.abs(t.h - hMed) <= hMed * 0.25);
+  const voci = [];
+  for (const sinistra of [true, false]) {
+    const col = buoni.filter(t => (t.x < W / 2 - 10) === sinistra);
+    if (!col.length) continue;
+    const xmin = Math.min(...col.map(t => t.x));
+    const ok = col.filter(t => t.x - xmin < 12).sort((a, b) => a.y - b.y);
+    ok.forEach((t, i) => {
+      const dopo = ok[i + 1];
+      voci.push({
+        p: pag, es: Number(t.str), pdf, u: unitaDiPdf(pdf)?.n, stimato: true,
+        b: [Math.max(10, t.x - 8), Math.max(10, t.y - 5), sinistra ? W / 2 + 2 : W - 10, dopo ? dopo.y - 4 : Math.min(H - 30, t.y + 160)],
+      });
+    });
+  }
+  cacheTesto.set(k, voci);
+  return voci;
+}
+
+/** Ricerca "di riserva" nel testo della pagina */
+async function cercaNelTesto(pag, es) {
+  return (await eserciziDaTesto(pag)).find(v => v.es === es) || null;
 }
 
 // ---------------------------------------------------------------------

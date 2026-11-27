@@ -1,7 +1,7 @@
 {
- "versione": "1.7.9",
+ "versione": "1.8.0",
  "data": "2026-11-27",
- "novita": "Evidenziatore rifatto: leggero, niente più crash; colore uniforme anche passando più volte",
+ "novita": "Tocca un esercizio sulla pagina anche nei libri senza indice (es. Fisica)",
  "file": [
   "index.html",
   "manifest.webmanifest",
