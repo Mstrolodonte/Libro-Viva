@@ -152,7 +152,7 @@ function muovi(f, e) {
     if (corrente.gomma) cancellaVicino(f, punto(f, ev));
     else corrente.p.push(punto(f, ev));
   }
-  if (!corrente.gomma) { ridisegnaTutto(f); disegnaTratto(f, corrente); }
+  if (!corrente.gomma) ridisegnaTutto(f, corrente);
 }
 
 function su(f, e) {
@@ -174,8 +174,8 @@ function cancellaVicino(f, [x, y]) {
   if (f.tratti.length !== prima) ridisegnaTutto(f);
 }
 
-function disegnaTratto(f, t) {
-  const { ctx, W, H } = f;
+function disegnaTratto(f, t, ctx = f.ctx) {
+  const { W, H } = f;
   const pts = t.p;
   if (!pts.length) return;
   ctx.save();
@@ -183,7 +183,7 @@ function disegnaTratto(f, t) {
   ctx.lineJoin = 'round';
   ctx.strokeStyle = t.c;
   ctx.fillStyle = t.c;
-  if (t.t === 'evid') { ctx.globalAlpha = 0.35; ctx.globalCompositeOperation = 'multiply'; ctx.lineCap = 'butt'; }
+  if (t.t === 'evid') ctx.lineCap = 'butt';   // trasparenza: la mette ridisegnaTutto su tutto il livello
   const scala = W / 600;   // lo spessore segue lo zoom
   if (pts.length === 1) {
     ctx.beginPath();
@@ -212,9 +212,33 @@ function disegnaTratto(f, t) {
   ctx.restore();
 }
 
-function ridisegnaTutto(f) {
-  f.ctx.clearRect(0, 0, f.W, f.H);
-  for (const t of f.tratti) disegnaTratto(f, t);
+/**
+ * Ridisegna la pagina. L'evidenziatore va su un livello a parte, disegnato
+ * pieno e poi reso trasparente tutto insieme: così passando più volte nello
+ * stesso punto il colore resta uguale (non diventa più scuro).
+ * La penna sta sempre sopra l'evidenziatore.
+ */
+function ridisegnaTutto(f, inCorso = null) {
+  const tutti = inCorso ? [...f.tratti, inCorso] : f.tratti;
+  const { ctx, canvas } = f;
+  ctx.clearRect(0, 0, f.W, f.H);
+  const evid = tutti.filter(t => t.t === 'evid');
+  if (evid.length) {
+    const liv = (f.livello ||= document.createElement('canvas'));
+    if (liv.width !== canvas.width || liv.height !== canvas.height) { liv.width = canvas.width; liv.height = canvas.height; }
+    const lc = liv.getContext('2d');
+    lc.setTransform(1, 0, 0, 1, 0, 0);
+    lc.clearRect(0, 0, liv.width, liv.height);
+    lc.setTransform(canvas.width / f.W, 0, 0, canvas.height / f.H, 0, 0);
+    for (const t of evid) disegnaTratto(f, t, lc);
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 0.35;
+    ctx.globalCompositeOperation = 'multiply';
+    ctx.drawImage(liv, 0, 0);
+    ctx.restore();
+  }
+  for (const t of tutti) if (t.t !== 'evid' && !t.gomma) disegnaTratto(f, t);
 }
 
 function salva(f) {

@@ -1,7 +1,7 @@
 {
- "versione": "1.7.4",
+ "versione": "1.7.5",
  "data": "2026-11-27",
- "novita": "Con due dita non si disegna più: servono solo per zoomare e spostare la pagina",
+ "novita": "Due dita non disegnano; evidenziatore sempre dello stesso colore anche se ci passi sopra più volte",
  "file": [
   "index.html",
   "manifest.webmanifest",
