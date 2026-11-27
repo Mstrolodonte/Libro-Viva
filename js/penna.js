@@ -34,8 +34,8 @@ export function collega(canvas) {
   fogli.push(f);
   canvas.addEventListener('pointerdown', e => giu(f, e));
   canvas.addEventListener('pointermove', e => muovi(f, e));
-  canvas.addEventListener('pointerup', () => su(f));
-  canvas.addEventListener('pointercancel', () => su(f));
+  canvas.addEventListener('pointerup', e => { su(f, e); ditoSu(e); });
+  canvas.addEventListener('pointercancel', e => { annullaTratto(f, e); ditoSu(e); });
   // Su iPad: se tocca la Pencil, blocca lo scorrimento della pagina.
   // Il dito invece continua a scorrere.
   const bloccaStilo = e => {
@@ -102,13 +102,41 @@ function punto(f, e) {
   return [+((e.clientX - r.left) / r.width).toFixed(5), +((e.clientY - r.top) / r.height).toFixed(5), +pr.toFixed(2)];
 }
 
+// Dita appoggiate sullo schermo: con due o più dita NON si disegna
+// (servono per zoomare e spostare la pagina)
+const dita = new Set();
+let bloccoDita = false;
+function ditoSu(e) {
+  if (e.pointerType !== 'touch') return;
+  dita.delete(e.pointerId);
+  if (!dita.size) bloccoDita = false;
+}
+/** Butta via il tratto in corso (non lo salva) */
+function annullaTratto(f, e) {
+  if (!corrente || ultimo !== f || (e && corrente.id !== e.pointerId)) return;
+  corrente = null;
+  ridisegnaTutto(f);
+}
+
 function giu(f, e) {
+  if (e.pointerType === 'touch') {
+    dita.add(e.pointerId);
+    if (dita.size > 1) {
+      // secondo dito: niente disegno, e cancello il tratto appena iniziato col primo dito
+      bloccoDita = true;
+      if (corrente?.dito) { const g = ultimo; corrente = null; if (g) ridisegnaTutto(g); }
+      return;
+    }
+    if (bloccoDita) return;
+  }
   if (!puoDisegnare(e)) return;
   e.preventDefault();
   try { f.canvas.setPointerCapture(e.pointerId); } catch (err) { /* */ }
   ultimo = f;
-  if (strumento.tipo === 'gomma') { corrente = { gomma: true }; cancellaVicino(f, punto(f, e)); return; }
+  const dito = e.pointerType === 'touch';
+  if (strumento.tipo === 'gomma') { corrente = { gomma: true, id: e.pointerId, dito }; cancellaVicino(f, punto(f, e)); return; }
   corrente = {
+    id: e.pointerId, dito,
     t: strumento.tipo,
     c: strumento.tipo === 'evid' ? strumento.coloreEvid : strumento.colore,
     w: strumento.tipo === 'evid' ? strumento.spessore * 6 : strumento.spessore,
@@ -117,7 +145,7 @@ function giu(f, e) {
 }
 
 function muovi(f, e) {
-  if (!corrente || ultimo !== f) return;
+  if (!corrente || ultimo !== f || e.pointerId !== corrente.id) return;
   e.preventDefault();
   const eventi = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
   for (const ev of (eventi.length ? eventi : [e])) {
@@ -127,10 +155,11 @@ function muovi(f, e) {
   if (!corrente.gomma) { ridisegnaTutto(f); disegnaTratto(f, corrente); }
 }
 
-function su(f) {
-  if (!corrente || ultimo !== f) return;
+function su(f, e) {
+  if (!corrente || ultimo !== f || (e && e.pointerId !== corrente.id)) return;
   if (!corrente.gomma && corrente.p.length > 0) {
-    f.tratti.push(corrente);
+    const { id, dito, ...tratto } = corrente;
+    f.tratti.push(tratto);
     f.annullati = [];
   }
   corrente = null;

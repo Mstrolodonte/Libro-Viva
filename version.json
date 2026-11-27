@@ -1,7 +1,7 @@
 {
- "versione": "1.7.3",
+ "versione": "1.7.4",
  "data": "2026-11-27",
- "novita": "Admin: scegli il libro e aggiungi le soluzioni degli esercizi per ogni libro",
+ "novita": "Con due dita non si disegna più: servono solo per zoomare e spostare la pagina",
  "file": [
   "index.html",
   "manifest.webmanifest",
