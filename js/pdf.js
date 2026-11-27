@@ -128,9 +128,10 @@ export async function testoPagina(doc, numero) {
   const vp = page.getViewport({ scale: 1 });
   const tc = await page.getTextContent();
   return tc.items.filter(it => it.str !== undefined).map(it => {
-    const [, , , d, e, f] = it.transform;
+    const [a, b, , d, e, f] = it.transform;
     const [x, y] = vp.convertToViewportPoint(e, f);
-    return { str: it.str, x, y: y - Math.abs(d), h: Math.abs(d), w: it.width };
+    // ruotato: testo in verticale (es. la fascia "Problemi" a lato della pagina)
+    return { str: it.str, x, y: y - Math.abs(d), h: Math.abs(d), w: it.width, ruotato: Math.abs(b) > Math.abs(a) };
   });
 }
 

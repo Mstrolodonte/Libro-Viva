@@ -1,7 +1,7 @@
 {
- "versione": "1.7.7",
+ "versione": "1.7.8",
  "data": "2026-11-27",
- "novita": "Capitoli dei libri sistemati: numero del capitolo preso dal libro, pagine iniziali senza numero",
+ "novita": "Esercizi: trovati anche nei PDF con i numeri spezzati, ricerca solo nello stesso capitolo, ritaglio della sola colonna",
  "file": [
   "index.html",
   "manifest.webmanifest",

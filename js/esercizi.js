@@ -12,7 +12,7 @@ import { el, toast, apriScheda } from './ui.js';
 import { db, ldb } from './db.js';
 import { stato, apriSvolti, emit, on } from './stato.js';
 import { ritaglio, tagliaBiancoInFondo, testoPagina } from './pdf.js';
-import { LIBRO, RICERCA, libroToPdf, UNITA, unitaDiPdf } from './config.js';
+import { LIBRO, RICERCA, libroToPdf, UNITA, unitaDiPdf, fineUnita } from './config.js';
 
 // ---------------------------------------------------------------------
 //  Indici
@@ -78,7 +78,10 @@ export function ordinePagine(p, passo = RICERCA.passo, massimo = RICERCA.massimo
  */
 export async function cercaEsercizio(p, es) {
   if (!indice.pronto || indice.libro !== stato.idLibro) await caricaIndici();
-  for (const { p: pag } of ordinePagine(p)) {
+  // cerco solo dentro lo stesso capitolo della pagina scritta
+  const u = unitaDiPagina(p);
+  const dentro = u ? (x => x >= u.inizio && x <= fineUnita(u)) : () => true;
+  for (const { p: pag } of ordinePagine(p).filter(x => dentro(x.p))) {
     const voci = indice.perPagina.get(pag);
     if (voci) {
       const v = voci.find(x => x.es === es);
@@ -92,11 +95,28 @@ export async function cercaEsercizio(p, es) {
   return null;
 }
 
+/**
+ * In alcuni PDF (es. esportati da Goodnotes) i numeri sono spezzati in una
+ * cifra per pezzo: "5", "7" invece di "57". Riunisco le cifre vicine sulla stessa riga.
+ */
+function unisciCifre(pezzi) {
+  const out = [];
+  const ordinati = pezzi.filter(t => t.str.trim() && !t.ruotato).sort((a, b) => (Math.abs(a.y - b.y) < 2 ? a.x - b.x : a.y - b.y));
+  for (const t of ordinati) {
+    const prec = out[out.length - 1];
+    if (prec && /^\d+$/.test(prec.str) && /^\d+$/.test(t.str.trim()) && Math.abs(prec.y - t.y) < 2 &&
+        t.x - (prec.x + (prec.w || 0)) < 3 && t.x >= prec.x) {
+      out[out.length - 1] = { ...prec, str: prec.str + t.str.trim(), w: t.x + (t.w || 0) - prec.x };
+    } else out.push({ ...t, str: t.str.trim() });
+  }
+  return out;
+}
+
 /** Ricerca "di riserva" nel testo della pagina */
 async function cercaNelTesto(pag, es) {
   const pdf = libroToPdf(pag);
   if (pdf > stato.totalePagine) return null;
-  const pezzi = await testoPagina(stato.libro, pdf);
+  const pezzi = unisciCifre(await testoPagina(stato.libro, pdf));
   const n = String(es);
   // il numero deve essere da solo e il primo pezzo della sua riga
   const cand = pezzi.filter(t => t.str.trim() === n &&
@@ -111,7 +131,7 @@ async function cercaNelTesto(pag, es) {
   const fine = dopo ? dopo.y - 4 : Math.min(H - 36, t.y + 160);
   return {
     p: pag, es, pdf, u: unitaDiPdf(pdf)?.n,
-    b: [sinistra ? 30 : t.x - 8, Math.max(10, t.y - 5), W - 22, fine],
+    b: [sinistra ? Math.max(10, t.x - 8) : t.x - 8, Math.max(10, t.y - 5), sinistra ? W / 2 + 2 : W - 10, fine],   // solo la colonna dell'esercizio
     stimato: true,
   };
 }
@@ -142,7 +162,7 @@ export async function apriEsercizio(p, es) {
   if (!ris) {
     const s = apriScheda(`p. ${p} · es. ${es}`);
     s.corpo.append(el('p', { class: 'avviso' },
-      `Non ho trovato l'esercizio ${es} vicino a pagina ${p} (ho cercato fino a ±${RICERCA.massimo} pagine). Controlla il numero.`));
+      `Non ho trovato l'esercizio ${es} vicino a pagina ${p} (ho cercato nello stesso capitolo). Controlla il numero.`));
     return;
   }
   return mostraScheda(ris);
