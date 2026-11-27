@@ -25,7 +25,7 @@ import { ripristinaBackup } from './backup.js';
 import { apriZip } from './zip.js';
 
 /** Importa una lista di File scelti dall'utente. Restituisce un riepilogo. */
-export async function importaFile(files, { admin = false } = {}) {
+export async function importaFile(files, { admin = false, soloSoluzioni = false } = {}) {
   const fatti = [], saltati = [];
   files = [...files];
   for (let i = 0; i < files.length; i++) {
@@ -41,6 +41,7 @@ export async function importaFile(files, { admin = false } = {}) {
           fatti.push(`Svolti unità ${u} (PDF)`);
           continue;
         }
+        if (soloSoluzioni) { saltati.push(`${nome} (qui carichi solo soluzioni: il PDF del libro si importa dalle sezioni del libro)`); continue; }
         if (!LIBRO.indiciApp || f.size > 50 * 1024 * 1024 || /libro/i.test(nome) || nome === LIBRO.nomeFile) {
           await salvaPdf('libro', f, { nome, origine: 'disco', modificato: f.lastModified });
           fatti.push(`Libro (${mb(f.size)})`);

@@ -16,7 +16,7 @@ import { importaFile, mostraRiepilogo, salvaSoluzioniJson } from './importa.js';
 import { caricaIndici, testoConFormule } from './esercizi.js';
 import { testoPagina } from './pdf.js';
 import { cardClassiAdmin } from './classi.js';
-import { chiediCancellaLibro } from './libreria.js';
+import { chiediCancellaLibro, entraNelLibro, apriImpostazioniLibro } from './libreria.js';
 
 async function hash(testo) {
   const dati = new TextEncoder().encode('libro-vivo:' + testo);
@@ -78,6 +78,31 @@ async function mostra() {
   // --- Classi (cartelle dei libri) ---
   c.append(await cardClassiAdmin());
 
+  // --- Scelta del libro: tutto quello che segue vale per questo libro ---
+  const libri = await elencoLibri();
+  const scelta = el('select', { class: 'campo' }, ...libri.map(l =>
+    el('option', { value: l.id, selected: l.id === stato.idLibro }, `${l.materia || 'Libro'} · ${l.titolo}${l.nascosto ? ' (nascosto)' : ''}`)));
+  scelta.onchange = async () => {
+    scelta.disabled = true;
+    await entraNelLibro(scelta.value);
+    s.chiudi(); mostra();
+  };
+  const nSoluzioni = (await ldb.keys('soluzioni')).length;
+  const caricaSoluzioni = async () => {
+    const f = await scegliFile({ accept: '.json,.pdf,.zip,application/json,application/pdf,application/zip', multiplo: true });
+    if (!f.length) return;
+    const r = await importaFile(f, { admin: true, soloSoluzioni: true });
+    mostraRiepilogo(r); s.chiudi(); mostra();
+  };
+  c.prepend(el('section', { class: 'card card-libro-admin' },
+    el('h3', {}, '📘 Soluzioni degli esercizi'),
+    el('label', { class: 'etichetta' }, 'Libro', scelta),
+    el('p', {}, nSoluzioni ? `✅ ${nSoluzioni} soluzioni caricate per ${LIBRO.materia || LIBRO.titolo}.` : `Nessuna soluzione per ${LIBRO.materia || LIBRO.titolo}.`),
+    el('p', { class: 'nota' }, 'Carica i file .json delle soluzioni (anche tutti insieme in uno .zip) e i PDF …_SVOLTI.pdf. Ogni soluzione ha pagina ed esercizio: se c\'è già, viene sostituita.'),
+    el('div', { class: 'riga-bottoni sinistra' },
+      el('button', { class: 'btn primario', onclick: caricaSoluzioni }, '➕ Aggiungi soluzioni esercizi'),
+      LIBRO.indiciApp ? '' : el('button', { class: 'btn', onclick: () => { s.chiudi(); apriImpostazioniLibro(); } }, '⚙️ Capitoli e pagine del libro'))));
+
   // --- Soluzioni per unità ---
   const kv = new Map(await ldb.all('kv'));
   const righe = UNITA.map(u => {
@@ -89,12 +114,12 @@ async function mostra() {
       el('td', {}, el('button', { class: 'btn piccolo', onclick: async () => {
         const f = await scegliFile({ accept: '.json,.pdf,.zip,application/json,application/pdf,application/zip', multiplo: true });
         if (!f.length) return;
-        const r = await importaFile(f, { admin: true });
+        const r = await importaFile(f, { admin: true, soloSoluzioni: true });
         mostraRiepilogo(r); s.chiudi(); mostra();
       } }, 'Carica')));
   });
-  c.append(el('section', { class: 'card' },
-    el('h3', {}, 'Soluzioni corrette per unità'),
+  if (righe.length) c.append(el('section', { class: 'card' },
+    el('h3', {}, `Soluzioni per unità · ${LIBRO.materia || LIBRO.titolo}`),
     el('p', { class: 'nota' }, 'Carica i file Uxx_….json (soluzioni a passi) e/o Uxx_…_SVOLTI.pdf. Se una soluzione esiste già, viene sostituita.'),
     el('div', { class: 'tabella-scroll' }, el('table', { class: 'tabella' }, el('tbody', {}, ...righe)))));
 
@@ -117,7 +142,7 @@ async function mostra() {
     else toast('Nessuna soluzione a passi: scrivila tu');
   };
   c.append(el('section', { class: 'card' },
-    el('h3', {}, 'Aggiungi o correggi una soluzione'),
+    el('h3', {}, `Aggiungi o correggi una soluzione · ${LIBRO.materia || LIBRO.titolo}`),
     el('div', { class: 'riga-campi' }, el('label', { class: 'etichetta' }, 'Pagina libro', f.pagina), el('label', { class: 'etichetta' }, 'Esercizio', f.es),
       el('button', { class: 'btn', onclick: carica }, 'Apri esistente')),
     el('label', { class: 'etichetta' }, 'Risultato', f.risultato),
@@ -140,16 +165,16 @@ async function mostra() {
       scaricaFile('soluzioni_libro_vivo.json', new Blob([JSON.stringify(tutte)], { type: 'application/json' }));
     } }, '⬆️ Esporta tutte le soluzioni')));
 
-  // --- Capitoli ---
+  // --- Capitoli e indici: solo per il libro di matematica (indici dell'app) ---
   const esitoCap = el('div', { class: 'nota' });
-  c.append(el('section', { class: 'card' },
+  if (LIBRO.indiciApp) c.append(el('section', { class: 'card' },
     el('h3', {}, 'Capitoli (unità)'),
     el('p', { class: 'nota' }, `Le unità sono divise con la mappa delle pagine (pagina PDF = pagina libro + ${LIBRO.offset}). Puoi ricontrollarla leggendo le intestazioni "UNITÀ n" del PDF.`),
     el('button', { class: 'btn', onclick: () => rilevaCapitoli(esitoCap) }, '🔍 Rileva capitoli automaticamente'),
     esitoCap));
 
   // --- Indici ---
-  c.append(el('section', { class: 'card' },
+  if (LIBRO.indiciApp) c.append(el('section', { class: 'card' },
     el('h3', {}, 'Indici (per esperti)'),
     el('p', { class: 'nota' }, 'Servono se cambia il libro. Si creano con gli script nella cartella tools/ del progetto.'),
     el('div', { class: 'riga-bottoni sinistra' },

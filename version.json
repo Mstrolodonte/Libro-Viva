@@ -1,7 +1,7 @@
 {
- "versione": "1.7.2",
+ "versione": "1.7.3",
  "data": "2026-11-27",
- "novita": "Admin: cancella un libro caricato; ogni utente può cancellare un libro dalle sue impostazioni",
+ "novita": "Admin: scegli il libro e aggiungi le soluzioni degli esercizi per ogni libro",
  "file": [
   "index.html",
   "manifest.webmanifest",
