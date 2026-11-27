@@ -154,9 +154,18 @@ export async function salvaLibroDef(def) {
 }
 
 export async function eliminaLibro(id) {
-  if (id === 'mat') throw new Error('Il libro di matematica non si può togliere, solo nascondere');
-  const salvati = ((await db.get('kv', 'libri')) || []).filter(l => l.id !== id);
+  // il libro di matematica è dentro l'app: cancello i suoi file e dati e lo nascondo
+  let salvati = (await db.get('kv', 'libri')) || [];
+  if (id === 'mat') {
+    const mat = salvati.find(l => l.id === 'mat') || { id: 'mat' };
+    salvati = [{ ...mat, nascosto: true }, ...salvati.filter(l => l.id !== 'mat')];
+  } else salvati = salvati.filter(l => l.id !== id);
   await db.set('kv', 'libri', salvati);
+  await db.del('kv', `${id}:copertina`);
+  // lo tolgo anche dalle classi
+  const classi = (await db.get('kv', 'classi')) || [];
+  if (classi.some(c => c.libri.includes(id))) await db.set('kv', 'classi', classi.map(c => ({ ...c, libri: c.libri.filter(x => x !== id) })));
+  if (stato.idLibro === id) { stato.libro = null; }
   for (const k of ['libro']) await chiudiPdf(`${id}:${k}`);
   await ldb.svuotaLibro(id);
   try { localStorage.removeItem(chiaveUltima(id)); } catch (e) { /* */ }

@@ -16,6 +16,7 @@ import { importaFile, mostraRiepilogo, salvaSoluzioniJson } from './importa.js';
 import { caricaIndici, testoConFormule } from './esercizi.js';
 import { testoPagina } from './pdf.js';
 import { cardClassiAdmin } from './classi.js';
+import { chiediCancellaLibro } from './libreria.js';
 
 async function hash(testo) {
   const dati = new TextEncoder().encode('libro-vivo:' + testo);
@@ -53,6 +54,26 @@ export async function apriAdmin() {
 async function mostra() {
   const s = apriScheda('🔑 Area admin', { larga: true });
   const c = s.corpo;
+
+  // --- Libri caricati: cancella ---
+  const cardLibri = el('section', { class: 'card' });
+  const disegnaLibri = async () => {
+    const libri = await elencoLibri();
+    const righe = [];
+    for (const l of libri) {
+      const pdf = await db.get('file', `${l.id}:libro`).then(r => r?.info).catch(() => null);
+      righe.push(el('tr', {},
+        el('td', {}, el('b', {}, l.materia || 'Libro'), el('br'), el('small', {}, l.titolo)),
+        el('td', {}, pdf ? '✅ PDF' : '—', l.nascosto ? ' · 🙈 nascosto' : ''),
+        el('td', {}, el('button', { class: 'btn piccolo pericolo', onclick: async () => { if (await chiediCancellaLibro(l)) disegnaLibri(); } }, '🗑 Cancella'))));
+    }
+    cardLibri.replaceChildren(
+      el('h3', {}, '📚 Libri caricati'),
+      el('p', { class: 'nota' }, 'Cancella un libro da questo iPad: PDF, soluzioni, disegni e progressi. Il libro di matematica resta nella libreria come nascosto: per riaverlo premi "Mostra Matematica" in fondo alla libreria e reimporta il PDF.'),
+      el('div', { class: 'tabella-scroll' }, el('table', { class: 'tabella' }, el('tbody', {}, ...righe))));
+  };
+  await disegnaLibri();
+  c.append(cardLibri);
 
   // --- Classi (cartelle dei libri) ---
   c.append(await cardClassiAdmin());

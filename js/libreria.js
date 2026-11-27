@@ -385,16 +385,24 @@ export async function apriImpostazioniLibro() {
       el('button', { class: 'btn', onclick: () => { s.chiudi(); emit('importa-libro'); } }, '📂 Importa / sostituisci PDF e soluzioni'),
       el('button', { class: 'btn', onclick: async () => { await creaCopertina(); toast('Copertina aggiornata'); } }, '🖼 Rifai copertina')),
     el('h3', {}, 'Togli dalla libreria'),
-    def.id === 'mat'
-      ? el('button', { class: 'btn', onclick: async () => { await salvaLibroDef({ ...def, nascosto: true }); s.chiudi(); emit('mostra-vista', 'libreria'); } }, '🙈 Nascondi questo libro')
-      : el('button', { class: 'btn pericolo', onclick: async () => {
-        if (!await conferma(`Togliere "${def.titolo}" dall'iPad? Si cancellano il PDF, i disegni, i compiti e i progressi di questo libro.`, { si: 'Togli', pericolo: true })) return;
-        await eliminaLibro(def.id);
+    el('div', { class: 'riga-bottoni sinistra' },
+      el('button', { class: 'btn', onclick: async () => { await salvaLibroDef({ ...def, nascosto: true }); s.chiudi(); emit('mostra-vista', 'libreria'); } }, '🙈 Nascondi (tiene i dati)'),
+      el('button', { class: 'btn pericolo', onclick: async () => {
+        if (!await chiediCancellaLibro(def)) return;
         s.chiudi();
-        emit('mostra-vista', 'libreria');
-      } }, '🗑 Togli il libro'));
+      } }, '🗑 Cancella il libro')));
 }
 
 on('libri-cambiati', () => { if ($('#vista-libreria')?.classList.contains('attiva')) disegnaLibreria(); });
 on('classi-cambiate', () => { if ($('#vista-libreria')?.classList.contains('attiva')) disegnaLibreria(); });
 on('libro-modificato', () => { if ($('#vista-home')?.classList.contains('attiva')) disegnaHomeLibro(); });
+
+/** Cancella un libro da questo iPad (con conferma). true se cancellato */
+export async function chiediCancellaLibro(def) {
+  const nome = `${def.materia ? def.materia + ' · ' : ''}${def.titolo}`;
+  if (!await conferma(`⚠️ Cancellare "${nome}" da questo iPad? Si cancellano il PDF, le soluzioni, i disegni, gli appunti e i progressi di questo libro. Non si può tornare indietro.`, { si: 'Cancella il libro', pericolo: true })) return false;
+  await eliminaLibro(def.id);
+  toast('Libro cancellato');
+  if (document.body.dataset.vista !== 'libreria') emit('mostra-vista', 'libreria');
+  return true;
+}

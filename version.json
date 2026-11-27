@@ -1,7 +1,7 @@
 {
- "versione": "1.7.1",
+ "versione": "1.7.2",
  "data": "2026-11-27",
- "novita": "Barra in alto più bassa e senza ombra quando l'app è aperta dalla Home",
+ "novita": "Admin: cancella un libro caricato; ogni utente può cancellare un libro dalle sue impostazioni",
  "file": [
   "index.html",
   "manifest.webmanifest",
