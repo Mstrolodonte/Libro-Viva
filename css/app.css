@@ -65,8 +65,8 @@ code { background: var(--superficie-2); padding: 1px 5px; border-radius: 5px; fo
   position: fixed; top: 0; left: 0; right: 0; height: calc(var(--alto) + env(safe-area-inset-top));
   padding: env(safe-area-inset-top) 8px 0; display: flex; align-items: center; gap: 6px;
   background: var(--superficie); border-bottom: 1px solid var(--bordo); z-index: 20;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, .02), 0 4px 14px rgba(20, 30, 50, .05);
 }
+
 .gruppo { display: flex; align-items: center; gap: 0; background: var(--superficie-2); border-radius: 13px; padding: 2px; }
 .gruppo .btn-icona { min-width: 40px; height: 40px; border-radius: 11px; }
 .btn-zoom-valore { font-size: .8rem !important; font-weight: 600; min-width: 54px !important; font-variant-numeric: tabular-nums; color: var(--testo-2); }
@@ -448,3 +448,11 @@ body[data-vista="libreria"] main { bottom: env(safe-area-inset-bottom); }
 .form-esercizi .riga-bottoni { margin-top: 10px; }
 .progresso-totale .barra-progresso { height: 8px; background: var(--bordo); border-radius: 4px; overflow: hidden; }
 .progresso-totale .barra-progresso > div { min-width: 4px; }
+
+/* app aperta dalla Home dell'iPad: barra più bassa, attaccata alla barra dell'ora */
+@media (display-mode: standalone) {
+  :root { --alto: 46px; }
+  #barra-alta { padding-top: max(0px, calc(env(safe-area-inset-top) - 4px)); height: calc(var(--alto) + max(0px, calc(env(safe-area-inset-top) - 4px))); }
+  body[data-vista="libro"] main { top: calc(var(--alto) + max(0px, calc(env(safe-area-inset-top) - 4px))); }
+  #barra-penna { top: calc(var(--alto) + env(safe-area-inset-top) + 6px); }
+}

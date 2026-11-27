@@ -1,7 +1,7 @@
 {
- "versione": "1.7.0",
+ "versione": "1.7.1",
  "data": "2026-11-27",
- "novita": "Penna tipo Notability, classi (cartelle di libri), progressi nei Capitoli, esercizi su più pagine senza ';', cancella progressi e appunti, PDF compiti senza LaTeX",
+ "novita": "Barra in alto più bassa e senza ombra quando l'app è aperta dalla Home",
  "file": [
   "index.html",
   "manifest.webmanifest",
