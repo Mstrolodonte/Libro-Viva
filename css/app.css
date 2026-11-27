@@ -181,7 +181,7 @@ body[data-vista="libro"] main { top: calc(var(--alto) + env(safe-area-inset-top)
 }
 /* margin:auto centra le pagine finché sono piccole; quando sono più grandi si scorre */
 .pagine { position: relative; display: flex; gap: 4px; margin: auto; flex: none; will-change: transform; }
-.pagina-wrap { position: relative; background: #fff; box-shadow: var(--ombra-pagina); border-radius: 2px; flex: none; }
+.pagina-wrap { position: relative; isolation: isolate; background: #fff; box-shadow: var(--ombra-pagina); border-radius: 2px; flex: none; }
 /* libro aperto: ombra del dorso fra le due pagine */
 .pagine.affiancate #pagina-wrap::after, .pagine.affiancate #pagina-wrap-2::after {
   content: ""; position: absolute; top: 0; bottom: 0; width: 28px; pointer-events: none;
@@ -189,7 +189,7 @@ body[data-vista="libro"] main { top: calc(var(--alto) + env(safe-area-inset-top)
 .pagine.affiancate #pagina-wrap::after { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, .10), transparent); }
 .pagine.affiancate #pagina-wrap-2::after { left: 0; background: linear-gradient(to right, rgba(0, 0, 0, .10), transparent); }
 .canvas-pdf { display: block; }
-.canvas-penna { position: absolute; inset: 0; pointer-events: none; }
+.canvas-penna { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; }
 .canvas-penna.disegno { pointer-events: auto; cursor: crosshair; }
 :root.pagine-scure[data-theme="dark"] .canvas-pdf { filter: invert(.9) hue-rotate(180deg); }
 @media (prefers-color-scheme: dark) { :root.pagine-scure:not([data-theme="light"]) .canvas-pdf { filter: invert(.9) hue-rotate(180deg); } }

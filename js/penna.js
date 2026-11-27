@@ -152,7 +152,10 @@ function muovi(f, e) {
     if (corrente.gomma) cancellaVicino(f, punto(f, ev));
     else corrente.p.push(punto(f, ev));
   }
-  if (!corrente.gomma) ridisegnaTutto(f, corrente);
+  // evidenziatore: colore pieno, basta ridisegnare il tratto sopra (veloce);
+  // alla fine (su) si ridisegna tutto con la penna sopra
+  if (corrente.t === 'evid') disegnaTratto(f, corrente);
+  else if (!corrente.gomma) { ridisegnaTutto(f); disegnaTratto(f, corrente); }
 }
 
 function su(f, e) {
@@ -174,16 +177,15 @@ function cancellaVicino(f, [x, y]) {
   if (f.tratti.length !== prima) ridisegnaTutto(f);
 }
 
-function disegnaTratto(f, t, ctx = f.ctx) {
-  const { W, H } = f;
+function disegnaTratto(f, t) {
+  const { ctx, W, H } = f;
   const pts = t.p;
   if (!pts.length) return;
   ctx.save();
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
-  ctx.strokeStyle = t.c;
-  ctx.fillStyle = t.c;
-  if (t.t === 'evid') ctx.lineCap = 'butt';   // trasparenza: la mette ridisegnaTutto su tutto il livello
+  ctx.strokeStyle = t.t === 'evid' ? chiaro(t.c) : t.c;
+  ctx.fillStyle = ctx.strokeStyle;
   const scala = W / 600;   // lo spessore segue lo zoom
   if (pts.length === 1) {
     ctx.beginPath();
@@ -213,36 +215,26 @@ function disegnaTratto(f, t, ctx = f.ctx) {
 }
 
 /**
- * Ridisegna la pagina. L'evidenziatore va su un livello a parte, disegnato
- * pieno e poi reso trasparente tutto insieme: così passando più volte nello
- * stesso punto il colore resta uguale (non diventa più scuro).
- * La penna sta sempre sopra l'evidenziatore.
+ * Ridisegna la pagina: prima l'evidenziatore, poi la penna (sempre sopra).
+ * L'evidenziatore è un colore chiaro PIENO, e la tela si fonde con la pagina
+ * in "multiply" (CSS): passando più volte il colore resta uguale, il testo
+ * sotto si vede, e non serve nessuna tela in più (sull'iPad la memoria è poca).
  */
-let livello = null;   // tela di appoggio per l'evidenziatore (una sola per tutte le pagine)
 function ridisegnaTutto(f, inCorso = null) {
   const tutti = inCorso ? [...f.tratti, inCorso] : f.tratti;
-  const { ctx, canvas } = f;
-  ctx.clearRect(0, 0, f.W, f.H);
-  const evid = tutti.filter(t => t.t === 'evid');
-  if (evid.length) {
-    const liv = (livello ||= document.createElement('canvas'));
-    if (liv.width !== canvas.width || liv.height !== canvas.height) { liv.width = canvas.width; liv.height = canvas.height; }
-    const lc = liv.getContext('2d');
-    lc.setTransform(1, 0, 0, 1, 0, 0);
-    lc.clearRect(0, 0, liv.width, liv.height);
-    lc.setTransform(canvas.width / f.W, 0, 0, canvas.height / f.H, 0, 0);
-    for (const t of evid) disegnaTratto(f, t, lc);
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.globalAlpha = 0.35;
-    ctx.globalCompositeOperation = 'multiply';
-    ctx.drawImage(liv, 0, 0);
-    ctx.restore();
-    // libero subito la memoria (sull'iPad le tele sono poche: senza, il libro
-    // può restare disegnato a metà). La tengo solo mentre stai evidenziando.
-    if (!inCorso) { liv.width = 0; liv.height = 0; }
-  }
+  f.ctx.clearRect(0, 0, f.W, f.H);
+  for (const t of tutti) if (t.t === 'evid') disegnaTratto(f, t);
   for (const t of tutti) if (t.t !== 'evid' && !t.gomma) disegnaTratto(f, t);
+}
+
+/** Colore dell'evidenziatore schiarito come se fosse trasparente al 35% su carta bianca */
+const chiari = new Map();
+function chiaro(c) {
+  if (chiari.has(c)) return chiari.get(c);
+  const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(c);
+  const v = m ? `rgb(${m.slice(1).map(h => Math.round(255 - (255 - parseInt(h, 16)) * 0.35)).join(',')})` : c;
+  chiari.set(c, v);
+  return v;
 }
 
 function salva(f) {

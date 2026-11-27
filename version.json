@@ -1,7 +1,7 @@
 {
- "versione": "1.7.8",
+ "versione": "1.7.9",
  "data": "2026-11-27",
- "novita": "Esercizi: trovati anche nei PDF con i numeri spezzati, ricerca solo nello stesso capitolo, ritaglio della sola colonna",
+ "novita": "Evidenziatore rifatto: leggero, niente più crash; colore uniforme anche passando più volte",
  "file": [
   "index.html",
   "manifest.webmanifest",
